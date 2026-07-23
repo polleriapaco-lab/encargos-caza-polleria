@@ -822,25 +822,30 @@ svg {
 <body>
 <div id="caza-app">
   <style>
+    #caza-app{--font-size-base:18px;padding:16px 20px}
     #caza-app .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}
     #caza-app .brand{display:flex;align-items:center;gap:10px}
     #caza-app .nav{display:flex;gap:8px;flex-wrap:wrap}
-    #caza-app .steps{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin-bottom:18px}
-    #caza-app .step{text-align:center;padding:8px;border-bottom:3px solid var(--border);color:var(--muted-foreground)}
+    #caza-app .nav .btn{min-height:52px}
+    #caza-app .steps{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:22px}
+    #caza-app .step{text-align:center;padding:14px 8px;border-bottom:4px solid var(--border);color:var(--muted-foreground)}
     #caza-app .step.on{border-color:var(--viz-series-1);color:var(--foreground)}
-    #caza-app .screen{display:grid;gap:16px}
-    #caza-app .fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-    #caza-app .animal-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
-    #caza-app .animal-choice{display:grid;gap:8px;text-align:center}
-    #caza-app .animal-choice .btn{width:100%}
-    #caza-app .qty-row{display:grid;grid-template-columns:auto 1fr auto;gap:6px;align-items:center}
+    #caza-app .screen{display:grid;gap:20px}
+    #caza-app .fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+    #caza-app .form-control,#caza-app .form-select{min-height:54px}
+    #caza-app .animal-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+    #caza-app .animal-choice{display:grid;gap:10px;text-align:center}
+    #caza-app .animal-choice .btn{width:100%;min-height:72px}
+    #caza-app .qty-row{display:grid;grid-template-columns:58px 1fr 58px;gap:8px;align-items:center}
+    #caza-app .qty-row .btn,#caza-app .qty-row .form-control{min-height:54px}
     #caza-app .qty-row .form-control{text-align:center}
-    #caza-app .prep-block{display:grid;gap:10px;padding-bottom:16px;border-bottom:1px solid var(--border)}
-    #caza-app .prep-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
-    #caza-app .prep-item{display:grid;gap:7px;text-align:center}
-    #caza-app .prep-item .btn{width:100%}
-    #caza-app .price-row{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+    #caza-app .prep-block{display:grid;gap:14px;padding-bottom:22px;border-bottom:2px solid var(--border)}
+    #caza-app .prep-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+    #caza-app .prep-item{display:grid;gap:10px;text-align:center}
+    #caza-app .prep-item>.btn{width:100%;min-height:76px}
+    #caza-app .prep-price{display:grid;gap:6px}
     #caza-app .actions{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+    #caza-app .actions .btn{min-height:54px}
     #caza-app .summary{display:grid;gap:10px}
     #caza-app .summary-row{display:grid;grid-template-columns:140px 1fr;gap:10px;padding-bottom:8px;border-bottom:1px solid var(--border)}
     #caza-app .message{white-space:pre-line}
@@ -1012,7 +1017,7 @@ svg {
           preps.forEach(p=>{
             const price=basePrices[animal.name+'|'+p.name]??'';
             const item=document.createElement('div');item.className='prep-item';
-            item.innerHTML='<button type="button" class="btn viz-tile" aria-pressed="false"><h3>'+p.icon+'</h3>'+p.name+'</button><div class="price-row"><label class="form-label">Piezas<input class="form-control pieces" type="number" min="0" max="'+animal.qty+'" step="1" value="0"></label><label class="form-label">€/pieza<input class="form-control price" type="number" min="0" step="0.10" value="'+price+'"></label></div>'+(p.name==='Otros'?'<input class="form-control other-prep" placeholder="Escriba la preparación">':'');
+            item.innerHTML='<button type="button" class="btn viz-tile" aria-pressed="false"><h3>'+p.icon+'</h3>'+p.name+'</button><label class="form-label">Piezas<div class="qty-row"><button type="button" class="btn prep-minus" aria-label="Quitar una pieza">−</button><input class="form-control pieces" type="number" min="0" max="'+animal.qty+'" step="1" value="0"><button type="button" class="btn prep-plus" aria-label="Añadir una pieza">＋</button></div></label><label class="form-label prep-price">Precio por pieza (€)<input class="form-control price" type="number" min="0" step="0.10" value="'+price+'"></label>'+(p.name==='Otros'?'<input class="form-control other-prep" placeholder="Escriba la preparación">':'');
             const pieces=item.querySelector('.pieces'),tile=item.querySelector('.viz-tile');
             const update=()=>updateAllocation(block,pieces);
             tile.onclick=()=>{
@@ -1020,6 +1025,8 @@ svg {
               else if(Number(pieces.max)>0)pieces.value=1;
               update();
             };
+            item.querySelector('.prep-minus').onclick=()=>{pieces.value=Math.max(0,Number(pieces.value)-1);update();};
+            item.querySelector('.prep-plus').onclick=()=>{if(!pieces.disabled&&Number(pieces.value)<Number(pieces.max)){pieces.value=Number(pieces.value)+1;update();}};
             pieces.oninput=update;item.querySelector('.price').oninput=()=>updateAllocation(block);grid.appendChild(item);
           });
           box.appendChild(block);
@@ -1040,7 +1047,11 @@ svg {
           field.max=Math.max(0,received-others);
           field.disabled=total>=received&&Number(field.value)===0;
           const tile=field.closest('.prep-item').querySelector('.viz-tile');
+          const minus=field.closest('.prep-item').querySelector('.prep-minus');
+          const plus=field.closest('.prep-item').querySelector('.prep-plus');
           tile.disabled=field.disabled;
+          minus.disabled=Number(field.value)<=0;
+          plus.disabled=field.disabled||Number(field.value)>=Number(field.max);
           tile.setAttribute('aria-pressed',Number(field.value)>0?'true':'false');
         });
         const remaining=Math.max(0,received-total);
