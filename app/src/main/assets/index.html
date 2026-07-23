@@ -1,0 +1,1412 @@
+<!doctype html>
+<html lang="en" data-visualize-standalone>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Caza Polleria</title>
+<style>:root {
+  color-scheme: light dark;
+  background-color: transparent !important;
+
+  /* Agent-facing contract; keep in sync with SKILL.md. */
+  --background: var(
+    --main-surface-primary,
+    light-dark(rgb(255 255 255), rgb(24 24 24))
+  );
+  --foreground: light-dark(rgb(26 28 31), rgb(255 255 255));
+  --card: color-mix(in oklab, var(--foreground) 5%, transparent);
+  --card-foreground: var(--foreground);
+  --popover: light-dark(rgb(255 255 255), rgb(45 45 45));
+  --popover-foreground: var(--foreground);
+  --primary: light-dark(rgb(51 156 255), rgb(131 195 255));
+  --primary-foreground: light-dark(rgb(255 255 255), rgb(13 13 13));
+  --secondary: light-dark(rgb(255 255 255 / 96%), rgb(54 54 54 / 96%));
+  --secondary-foreground: var(--foreground);
+  --muted: color-mix(in srgb, var(--foreground) 10%, transparent);
+  --muted-foreground: light-dark(
+    rgb(26 28 31 / 49.4%),
+    rgb(255 255 255 / 49.8%)
+  );
+  --accent: light-dark(rgb(229 242 255), rgb(13 39 63));
+  --accent-foreground: var(--primary);
+  --destructive: light-dark(rgb(226 85 7), rgb(255 133 73));
+  --border: light-dark(rgb(26 28 31 / 8%), rgb(255 255 255 / 8.2%));
+  --input: light-dark(
+    rgb(26 28 31 / 11.8%),
+    color-mix(in oklab, rgb(0 0 0) 10%, transparent)
+  );
+  --ring: light-dark(rgb(51 156 255), rgb(131 195 255 / 76%));
+  --font-size-base: 14px;
+  --red: light-dark(rgb(186 38 35), rgb(250 66 62));
+  --green: light-dark(rgb(0 162 64), rgb(64 201 119));
+
+  /* Internal implementation variables; not part of the agent contract. */
+  --font-sans: -apple-system, system-ui, "Segoe UI", sans-serif;
+  --font-mono:
+    ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono",
+    monospace;
+  --font-size-normal: max(11px, var(--font-size-base));
+  --font-size-tooltip: calc(var(--font-size-base) - 1px);
+  --font-size-small: max(11px, calc(var(--font-size-base) - 2px));
+  --font-size-h1: calc(var(--font-size-normal) * 1.7142857143);
+  --font-size-h2: calc(var(--font-size-normal) * 1.4285714286);
+  --font-size-h3: calc(var(--font-size-normal) * 1.2857142857);
+  --font-weight-normal: 430;
+  --font-weight-medium: 500;
+  --line-height-normal: calc(var(--font-size-normal) * 1.5);
+  --line-height-tooltip: calc(var(--font-size-tooltip) * 1.4285714286);
+  --line-height-small: calc(var(--font-size-small) + 4px);
+  --radius: 10px;
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-2xl: calc(var(--radius) * 1.6);
+  --radius-full: 9999px;
+  --shadow-sm: 0 1px 2px -1px rgb(0 0 0 / 8%);
+  --checkmark-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 17 17'%3E%3Cpath d='M12.8961 3.64101C13.1297 3.41418 13.4984 3.37523 13.7779 3.56581C14.0571 3.75635 14.1554 4.11331 14.0299 4.41347L13.9615 4.53847L7.71151 13.7045C7.59411 13.8767 7.4063 13.9877 7.19881 14.0072C6.99136 14.0267 6.78564 13.9533 6.63826 13.806L2.88826 10.056L2.79842 9.9457C2.6192 9.67407 2.64927 9.30496 2.88826 9.06581C3.12738 8.82669 3.49647 8.79676 3.76815 8.97597L3.8785 9.06581L7.03084 12.2182L12.8053 3.74941L12.8961 3.64101Z'/%3E%3C/svg%3E");
+
+  /* Legacy aliases; not part of the current agent contract. */
+  --viz-bg: transparent;
+  --viz-panel: var(--card);
+  --viz-border: var(--border);
+  --viz-text: var(--foreground);
+  --viz-muted: var(--muted-foreground);
+  --viz-accent: var(--primary);
+  --viz-accent-text: var(--primary-foreground);
+  --viz-accent-bg: var(--accent);
+  --viz-font-size: var(--font-size-base);
+  --viz-warning: var(--destructive);
+  --color-background-primary: var(--background);
+  --color-text-primary: var(--foreground);
+  --color-border-secondary: var(--border);
+}
+
+:root[data-visualize-standalone] {
+  background-color: var(--background) !important;
+}
+
+/* Generic mobile code-block hosts provide light/dark mode but no series palette.
+   AppBlock hosts set all six variables themselves. */
+:root:not([data-app-block-surface]) {
+  --viz-series-1: var(--primary);
+  --viz-series-2: light-dark(#f3883b, #f59a56);
+  --viz-series-3: light-dark(#5dc977, #74d58b);
+  --viz-series-4: light-dark(#eb77b1, #f08fc0);
+  --viz-series-5: light-dark(#9b79ec, #aa91ef);
+  --viz-series-6: light-dark(#3ab9b1, #5acbc2);
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html > body {
+  margin: 0;
+  padding: 5px;
+  color: var(--foreground);
+  background: transparent !important;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-normal);
+  font-weight: var(--font-weight-normal);
+  line-height: var(--line-height-normal);
+}
+
+:root:not([data-app-block-surface]) > body {
+  padding: 12px;
+}
+
+a {
+  color: color-mix(in srgb, var(--viz-accent) 80%, var(--viz-text) 20%);
+  cursor: pointer;
+  font-weight: var(--font-weight-medium);
+  text-decoration: none;
+  text-underline-offset: 2px;
+}
+
+a:is(:hover, :focus-visible) {
+  text-decoration-line: underline;
+  text-decoration-style: dashed;
+  text-decoration-thickness: 0.5px;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p {
+  margin-block: 0;
+}
+
+h1 {
+  font-size: var(--font-size-h1);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+}
+
+h2 {
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+}
+
+h3,
+h4,
+h5,
+h6 {
+  font-size: var(--font-size-h3);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.3;
+}
+
+b,
+strong,
+th {
+  font-weight: var(--font-weight-medium);
+}
+
+code:not(pre code) {
+  display: inline;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  overflow-wrap: anywhere;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  word-break: break-word;
+}
+
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  color: var(--foreground);
+  font: inherit;
+  text-align: start;
+}
+
+.table :is(th, td) {
+  padding-block: 10px;
+  padding-inline: 0 24px;
+  overflow-wrap: anywhere;
+  border-bottom: 1px solid var(--border);
+  text-align: start;
+  vertical-align: top;
+}
+
+.table-responsive > .table :is(th, td) {
+  overflow-wrap: break-word;
+}
+
+.table :is(th, td):last-child {
+  padding-inline-end: 0;
+}
+
+.table :is(caption, thead th) {
+  font-weight: 600;
+}
+
+.table thead th {
+  padding-block: 8px;
+  border-bottom-color: color-mix(in srgb, var(--foreground) 16%, transparent);
+}
+
+.table tbody tr:last-child :is(th, td) {
+  border-bottom: 0;
+}
+
+.table.table-sm :is(th, td) {
+  padding-block: 6px;
+}
+
+.table.table-sm :is(th, td):not(:last-child) {
+  padding-inline-end: 16px;
+}
+
+.table :is(.text-end, [align="right"]) {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+.table :is(.text-center, [align="center"]) {
+  text-align: center;
+}
+
+.table .text-nowrap {
+  white-space: nowrap;
+}
+
+#widget {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  padding: 0;
+  background: transparent !important;
+}
+
+.card {
+  min-width: 0;
+  padding: 12px;
+  overflow: hidden;
+  overflow-wrap: break-word;
+  border-radius: var(--radius-2xl);
+  color: var(--card-foreground);
+  background: var(--card);
+}
+
+#widget > :not(.card) {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.tooltip {
+  position: fixed;
+  z-index: 50;
+  top: 0;
+  left: 0;
+  width: max-content;
+  max-width: min(
+    20rem,
+    var(--tooltip-available-width, calc(100vw - 10px)),
+    calc(100vw - 10px)
+  );
+  max-height: min(
+    var(--tooltip-available-height, calc(100vh - 10px)),
+    calc(100vh - 10px)
+  );
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  color: var(--popover-foreground);
+  background: var(--popover);
+  box-shadow: none;
+  font-size: var(--font-size-tooltip);
+  line-height: var(--line-height-tooltip);
+  overflow-wrap: break-word;
+  white-space: normal;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* The bundled tooltip runtime owns [data-tooltip]. AppBlock's CSS-only
+   pseudo-tooltip can widen dense grids even while hidden. */
+main [data-tooltip]::after {
+  content: none;
+}
+
+.viz-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(max(180px, 24%), 1fr));
+  gap: 10px;
+}
+
+.viz-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.viz-stat-value {
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+}
+
+.viz-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.viz-badge {
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  color: var(--accent-foreground);
+  background: var(--accent);
+  font-weight: var(--font-weight-medium);
+}
+
+small,
+.text-small,
+.viz-badge {
+  font-size: var(--font-size-small);
+  line-height: var(--line-height-small);
+}
+
+.text-muted {
+  color: var(--muted-foreground);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.viz-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.viz-controls > .form-label {
+  display: grid;
+  min-width: min(100%, 260px);
+  flex: 1 1 280px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 2px 12px;
+  margin-bottom: 0;
+}
+
+.viz-controls > .form-label > :is(.form-control, .form-range, .form-select) {
+  grid-column: 1 / -1;
+}
+
+.btn,
+.form-check-input,
+.form-control,
+.form-range,
+.form-select {
+  font: inherit;
+}
+
+.btn {
+  appearance: button;
+  display: inline-flex;
+  inline-size: fit-content;
+  max-inline-size: 100%;
+  min-height: 28px;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin: 0;
+  padding: 0 8px;
+  -webkit-app-region: no-drag;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-lg);
+  color: var(--secondary-foreground);
+  background: var(--secondary);
+  cursor: var(--cursor-interaction, pointer);
+  text-align: center;
+  text-decoration: none;
+  white-space: nowrap;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+.btn:is(.btn-block, .viz-tile) {
+  inline-size: 100%;
+}
+
+.btn.viz-tile {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+a.btn {
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.btn:not(:disabled):hover {
+  background: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.btn-primary {
+  border-color: transparent;
+  color: var(--interactive-label-primary-default, var(--primary-foreground));
+  background: var(--interactive-bg-primary-default, var(--foreground));
+  background-clip: padding-box;
+}
+
+.btn-primary .text-muted {
+  color: color-mix(
+    in srgb,
+    var(--interactive-label-primary-default, var(--primary-foreground)) 50%,
+    transparent
+  );
+}
+
+.btn-primary:not(:disabled):hover {
+  background: color-mix(in srgb, var(--foreground) 80%, transparent);
+  background-clip: padding-box;
+}
+
+.btn-ghost {
+  border-color: transparent;
+  color: var(--muted-foreground);
+  background: transparent;
+}
+
+.btn-ghost:not(:disabled):hover {
+  color: var(--foreground);
+  background: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+[data-lucide] {
+  stroke-width: 1.6;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--foreground);
+}
+
+.form-control {
+  display: block;
+  width: 100%;
+  min-height: 28px;
+  padding: 0 8px;
+  outline: none;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-lg);
+  color: var(--foreground);
+  background: var(--secondary);
+}
+
+.form-control::placeholder {
+  color: var(--muted-foreground);
+}
+
+.form-control[type="file"] {
+  padding: 0;
+  overflow: hidden;
+  cursor: var(--cursor-interaction, pointer);
+}
+
+.form-control[type="file"]::file-selector-button {
+  min-height: 26px;
+  margin-right: 8px;
+  padding: 0 8px;
+  border: 0;
+  border-right: 1px solid var(--input);
+  color: var(--secondary-foreground);
+  background: var(--secondary);
+  cursor: inherit;
+  font: inherit;
+}
+
+.form-control[type="file"]:not(:disabled):hover::file-selector-button {
+  background: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.form-control-color[type="color"] {
+  width: 40px;
+  height: 28px;
+  padding: 3px;
+  cursor: var(--cursor-interaction, pointer);
+}
+
+.form-control-color[type="color"]::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.form-control-color[type="color"]::-webkit-color-swatch {
+  border: 0;
+  border-radius: calc(var(--radius-lg) - 4px);
+}
+
+textarea.form-control {
+  height: auto;
+  min-height: 72px;
+  padding: 8px 10px;
+  resize: vertical;
+}
+
+.form-control:focus-visible {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-control:disabled,
+.form-select:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.form-select {
+  appearance: none;
+  display: block;
+  width: 100%;
+  min-height: 28px;
+  margin: 0;
+  padding: 0 32px 0 8px;
+  outline: none;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-lg);
+  color: var(--foreground);
+  background-color: var(--secondary);
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted-foreground) 50%),
+    linear-gradient(135deg, var(--muted-foreground) 50%, transparent 50%);
+  background-position:
+    calc(100% - 14px) 50%,
+    calc(100% - 10px) 50%;
+  background-repeat: no-repeat;
+  background-size: 4px 4px;
+  cursor: var(--cursor-interaction, default);
+}
+
+.form-select:not(:disabled):hover {
+  background-color: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.form-select:focus-visible {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-check {
+  display: flex;
+  min-height: 20px;
+  align-items: center;
+  gap: 6px;
+}
+
+.form-check-input {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  margin: 0;
+  border: 1px solid var(--input);
+  color: var(--primary-foreground);
+  background-color: transparent;
+  cursor: var(--cursor-interaction, default);
+  transition:
+    background-color 150ms,
+    border-color 150ms,
+    box-shadow 150ms;
+}
+
+.form-check:not(.form-switch) .form-check-input[type="checkbox"] {
+  border-color: var(--input);
+  border-radius: var(--radius-sm);
+  background-color: var(--secondary);
+  box-shadow: var(--shadow-sm);
+}
+
+.form-check:not(.form-switch)
+  .form-check-input:not(:disabled):not(:checked):hover {
+  background-color: var(--card);
+}
+
+.form-check:not(.form-switch) .form-check-input[type="checkbox"]:checked {
+  border-color: var(--primary);
+  background-color: var(--primary);
+}
+
+.form-check:not(.form-switch)
+  .form-check-input[type="checkbox"]:checked::before {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--primary-foreground);
+  content: "";
+  mask: var(--checkmark-image) center / 12px 12px no-repeat;
+}
+
+.form-check-input[type="radio"] {
+  width: 14px;
+  height: 14px;
+  border-radius: var(--radius-full);
+}
+
+.form-check-input[type="radio"]:checked {
+  border: 2px solid var(--primary);
+  background:
+    radial-gradient(circle, var(--primary-foreground) 0 2.5px, transparent 3px),
+    var(--primary);
+}
+
+.form-check:not(.form-switch) .form-check-input:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.form-check:not(.form-switch) .form-check-input:disabled {
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.form-check:not(.form-switch) .form-check-input:disabled + .form-check-label {
+  cursor: not-allowed;
+}
+
+.form-switch .form-check-input:disabled,
+.form-switch .form-check-input:disabled + .form-check-label {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.form-check-label {
+  color: var(--foreground);
+  cursor: var(--cursor-interaction, default);
+}
+
+.form-switch .form-check-input {
+  position: relative;
+  width: 32px;
+  height: 20px;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--muted);
+  box-shadow: none;
+  transition: background-color 200ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+.form-switch .form-check-input::before {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 16px;
+  height: 16px;
+  box-sizing: border-box;
+  border: 1px solid light-dark(var(--primary-foreground), var(--foreground));
+  border-radius: var(--radius-full);
+  background: light-dark(var(--primary-foreground), var(--foreground));
+  box-shadow: var(--shadow-sm);
+  content: "";
+  transform: translate(2px, -50%);
+  transition: transform 200ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+.form-switch .form-check-input:checked {
+  background: var(--primary);
+}
+
+.form-switch .form-check-input:checked::before {
+  transform: translate(14px, -50%);
+}
+
+.form-switch .form-check-input:focus-visible {
+  box-shadow: 0 0 0 2px var(--ring);
+}
+
+.form-range {
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: 28px;
+  flex: 1;
+  margin: 0;
+  padding: 0;
+  outline: none;
+  border: 0;
+  accent-color: var(--primary);
+  background: linear-gradient(
+      color-mix(in srgb, var(--foreground) 7%, transparent),
+      color-mix(in srgb, var(--foreground) 7%, transparent)
+    )
+    center / 100% 2px no-repeat;
+}
+
+.form-range::-webkit-slider-runnable-track {
+  height: 28px;
+  background: transparent;
+}
+
+.form-range::-webkit-slider-thumb {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  margin-top: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: light-dark(var(--primary-foreground), var(--foreground));
+}
+
+.form-range:focus-visible::-webkit-slider-thumb {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-range::-moz-range-track {
+  height: 28px;
+  background: transparent;
+}
+
+.form-range::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: light-dark(var(--primary-foreground), var(--foreground));
+}
+
+.form-range:focus-visible::-moz-range-thumb {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-range:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.btn:not(.btn-primary, .viz-tile):is(
+    [aria-pressed="true"],
+    [aria-selected="true"],
+    .is-selected
+  ) {
+  border-color: var(--primary);
+  color: var(--primary-foreground);
+  background: var(--primary);
+}
+
+.btn.viz-tile:is([aria-pressed="true"], [aria-selected="true"], .is-selected) {
+  border-color: var(--primary);
+  box-shadow: inset 0 0 0 1px var(--primary);
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+#widget > svg {
+  width: 100%;
+}
+
+.text-warning,
+.text-destructive {
+  color: var(--destructive);
+}
+</style>
+</head>
+<body>
+<div id="caza-app">
+  <style>
+    #caza-app .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+    #caza-app .brand{display:flex;align-items:center;gap:10px}
+    #caza-app .nav{display:flex;gap:8px;flex-wrap:wrap}
+    #caza-app .steps{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin-bottom:18px}
+    #caza-app .step{text-align:center;padding:8px;border-bottom:3px solid var(--border);color:var(--muted-foreground)}
+    #caza-app .step.on{border-color:var(--viz-series-1);color:var(--foreground)}
+    #caza-app .screen{display:grid;gap:16px}
+    #caza-app .fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+    #caza-app .animal-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+    #caza-app .animal-choice{display:grid;gap:8px;text-align:center}
+    #caza-app .animal-choice .btn{width:100%}
+    #caza-app .qty-row{display:grid;grid-template-columns:auto 1fr auto;gap:6px;align-items:center}
+    #caza-app .qty-row .form-control{text-align:center}
+    #caza-app .prep-block{display:grid;gap:10px;padding-bottom:16px;border-bottom:1px solid var(--border)}
+    #caza-app .prep-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+    #caza-app .prep-item{display:grid;gap:7px;text-align:center}
+    #caza-app .prep-item .btn{width:100%}
+    #caza-app .price-row{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+    #caza-app .actions{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+    #caza-app .summary{display:grid;gap:10px}
+    #caza-app .summary-row{display:grid;grid-template-columns:140px 1fr;gap:10px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+    #caza-app .message{white-space:pre-line}
+    #caza-app .order{display:grid;grid-template-columns:100px 1fr auto;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--border)}
+    #caza-app .order-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
+    #caza-app .order-lines{display:grid;gap:8px;margin-top:10px}
+    #caza-app .order-line{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding-top:8px;border-top:1px solid var(--border)}
+    #caza-app .line-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+    #caza-app [hidden]{display:none!important}
+    @media(max-width:650px){
+      #caza-app .animal-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+      #caza-app .prep-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+      #caza-app .fields{grid-template-columns:1fr}
+      #caza-app .order{grid-template-columns:1fr}
+      #caza-app .order-actions{justify-content:flex-start}
+      #caza-app .order-line{grid-template-columns:1fr}
+      #caza-app .line-actions{justify-content:flex-start}
+      #caza-app .step span{display:none}
+    }
+  </style>
+
+  <div class="topbar">
+    <div class="brand"><h2>🦆</h2><div><strong>LA POLLERÍA 2.0</strong><br><span class="text-small text-muted">Encargos de caza</span></div></div>
+    <div class="nav">
+      <button type="button" class="btn btn-primary" id="nav-new">＋ Encargo</button>
+      <button type="button" class="btn" id="nav-orders">📋 Encargos</button>
+      <button type="button" class="btn" id="nav-season">📊 Temporada</button>
+    </div>
+  </div>
+
+  <div class="steps" id="steps">
+    <div class="step on" data-step="1">👤 <span>Cliente</span></div>
+    <div class="step" data-step="2">🪶 <span>Animales</span></div>
+    <div class="step" data-step="3">🍲 <span>Preparación</span></div>
+    <div class="step" data-step="4">📅 <span>Fechas</span></div>
+    <div class="step" data-step="5">✅ <span>Confirmar</span></div>
+  </div>
+
+  <section class="screen" id="screen-1">
+    <h3>Datos del cliente</h3>
+    <div class="fields">
+      <label class="form-label">Nombre completo<input class="form-control" id="client-name" placeholder="Nombre del cliente"></label>
+      <label class="form-label">Teléfono / WhatsApp<input class="form-control" id="client-phone" inputmode="tel" placeholder="Ej. 612 345 678"></label>
+    </div>
+    <div class="actions"><span></span><button type="button" class="btn btn-primary" data-go="2">Elegir animales →</button></div>
+  </section>
+
+  <section class="screen" id="screen-2" hidden>
+    <h3>¿Qué animales ha traído?</h3>
+    <div class="animal-grid" id="animal-grid"></div>
+    <div id="other-animal-fields" hidden>
+      <label class="form-label">Nombre del animal<input class="form-control" id="other-animal-name" placeholder="Escriba el animal"></label>
+    </div>
+    <div class="actions"><button type="button" class="btn" data-go="1">← Atrás</button><button type="button" class="btn btn-primary" id="to-preps">Preparaciones →</button></div>
+  </section>
+
+  <section class="screen" id="screen-3" hidden>
+    <h3>Reparte las piezas y ajusta los precios</h3>
+    <p class="text-muted">La suma de las preparaciones debe coincidir con las piezas entregadas.</p>
+    <div id="prep-sections"></div>
+    <p class="text-destructive" id="prep-error"></p>
+    <div class="actions"><button type="button" class="btn" data-go="2">← Atrás</button><button type="button" class="btn btn-primary" id="to-dates">Fechas →</button></div>
+  </section>
+
+  <section class="screen" id="screen-4" hidden>
+    <h3>Fechas y pago</h3>
+    <div class="fields">
+      <label class="form-label">Fecha de entrada<input class="form-control" id="received-date" type="date"></label>
+      <label class="form-label">Fecha prevista de recogida<input class="form-control" id="pickup-date" type="date"></label>
+      <label class="form-label">Estado del pago<select class="form-select" id="payment-status"><option>Pendiente</option><option>Señal entregada</option><option>Pagado</option></select></label>
+      <label class="form-label">Importe entregado<input class="form-control" id="paid-amount" inputmode="decimal" value="0"></label>
+    </div>
+    <div class="actions"><button type="button" class="btn" data-go="3">← Atrás</button><button type="button" class="btn btn-primary" id="to-summary">Revisar encargo →</button></div>
+  </section>
+
+  <section class="screen" id="screen-5" hidden>
+    <h3>Resumen del encargo</h3>
+    <div class="summary card" id="summary"></div>
+    <div class="card message" id="whatsapp-preview"></div>
+    <div class="actions"><button type="button" class="btn" data-go="4">← Modificar</button><button type="button" class="btn btn-primary" id="confirm-order">Guardar y abrir WhatsApp</button></div>
+  </section>
+
+  <section class="screen" id="saved-screen" hidden>
+    <div class="card"><h3>✅ Encargo guardado</h3><p id="saved-text"></p></div>
+    <div class="actions"><button type="button" class="btn btn-primary" id="another-order">Crear otro encargo</button></div>
+  </section>
+
+  <section class="screen" id="orders-screen" hidden>
+    <div class="viz-controls">
+      <label class="form-label">Buscar cliente o encargo<input class="form-control" id="order-search" placeholder="Nombre, teléfono o número"></label>
+      <label class="form-label">Fecha de entrada<input class="form-control" id="orders-date" type="date"></label>
+    </div>
+    <div id="orders-list"></div>
+  </section>
+
+  <section class="screen" id="season-screen" hidden>
+    <div class="viz-controls">
+      <label class="form-label">Desde<input class="form-control" id="season-from" type="date"></label>
+      <label class="form-label">Hasta<input class="form-control" id="season-to" type="date"></label>
+    </div>
+    <div class="viz-grid" id="season-stats"></div>
+    <div class="table-responsive"><table class="table"><thead><tr><th>Animal</th><th class="text-end">Piezas</th><th class="text-end">Importe</th></tr></thead><tbody id="season-body"></tbody></table></div>
+  </section>
+
+  <script>
+    (() => {
+      const root=document.getElementById('caza-app');
+      const animals=[
+        {name:'Perdiz',icon:'🪶'},{name:'Codorniz',icon:'🐤'},{name:'Faisán',icon:'🦚'},
+        {name:'Conejo',icon:'🐇'},{name:'Pato',icon:'🦆'},{name:'Becada',icon:'🐦'},
+        {name:'Paloma',icon:'🕊️'},{name:'Zorzal',icon:'🐦'},{name:'Otros',icon:'✏️'}
+      ];
+      const preps=[
+        {name:'Pelar / preparar',icon:'🔪'},{name:'Escabechar',icon:'🫙'},
+        {name:'Estofar',icon:'🍲'},{name:'Otros',icon:'✍️'}
+      ];
+      const basePrices={
+        'Perdiz|Pelar / preparar':3.8,'Perdiz|Escabechar':8,'Perdiz|Estofar':10,
+        'Faisán|Pelar / preparar':7,'Faisán|Escabechar':9,
+        'Pato|Pelar / preparar':8,'Conejo|Pelar / preparar':5,
+        'Paloma|Pelar / preparar':3.8,'Zorzal|Pelar / preparar':2.5
+      };
+      let selected={},lines=[],orders=JSON.parse(localStorage.getItem('caza_orders')||'[]'),currentNumber='',currentMessage='';
+      const save=()=>localStorage.setItem('caza_orders',JSON.stringify(orders));
+      const money=n=>Number(n||0).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2})+' €';
+      const localIso=d=>{const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return y+'-'+m+'-'+day;};
+      const pretty=d=>new Intl.DateTimeFormat('es-ES',{day:'numeric',month:'long',year:'numeric'}).format(new Date(d+'T12:00:00'));
+      const today=localIso(new Date());
+      root.querySelector('#received-date').value=today;
+      root.querySelector('#pickup-date').min=today;
+
+      function show(id,step=null){
+        root.querySelectorAll('section.screen').forEach(x=>x.hidden=true);
+        root.querySelector('#'+id).hidden=false;
+        root.querySelector('#steps').hidden=step===null;
+        if(step!==null)root.querySelectorAll('.step').forEach(x=>x.classList.toggle('on',Number(x.dataset.step)<=step));
+      }
+      function go(n){show('screen-'+n,n);}
+      root.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>go(Number(b.dataset.go)));
+
+      const animalGrid=root.querySelector('#animal-grid');
+      animals.forEach(a=>{
+        const wrap=document.createElement('div');wrap.className='animal-choice';
+        wrap.innerHTML='<button type="button" class="btn viz-tile" aria-pressed="false"><h3>'+a.icon+'</h3>'+a.name+'</button><div class="qty-row"><button type="button" class="btn minus">−</button><input class="form-control qty" type="number" min="0" value="0" aria-label="Cantidad de '+a.name+'"><button type="button" class="btn plus">＋</button></div>';
+        const input=wrap.querySelector('.qty'),button=wrap.querySelector('.viz-tile');
+        const update=()=>{const q=Math.max(0,Number(input.value)||0);input.value=q;button.setAttribute('aria-pressed',q>0?'true':'false');selected[a.name]=q;root.querySelector('#other-animal-fields').hidden=a.name!=='Otros'||q===0;};
+        wrap.querySelector('.minus').onclick=()=>{input.value=Math.max(0,Number(input.value)-1);update();};
+        wrap.querySelector('.plus').onclick=()=>{input.value=Number(input.value)+1;update();};
+        button.onclick=()=>{input.value=Number(input.value)>0?0:1;update();};
+        input.oninput=update;animalGrid.appendChild(wrap);
+      });
+
+      function receivedAnimals(){
+        const out=Object.entries(selected).filter(([,q])=>q>0&&q!==undefined).map(([name,qty])=>({name:name==='Otros'?(root.querySelector('#other-animal-name').value.trim()||'Otro animal'):name,qty}));
+        return out;
+      }
+
+      root.querySelector('#to-preps').onclick=()=>{
+        const received=receivedAnimals();if(!received.length){alert('Indique al menos un animal.');return;}
+        lines=[];renderPrepSections(received);go(3);
+      };
+
+      function renderPrepSections(received){
+        const box=root.querySelector('#prep-sections');box.innerHTML='';
+        received.forEach(animal=>{
+          const block=document.createElement('div');block.className='prep-block';block.dataset.animal=animal.name;block.dataset.received=animal.qty;
+          block.innerHTML='<h3>'+animal.name+' · '+animal.qty+' piezas</h3><div class="prep-grid"></div><p class="text-small text-muted allocation">Asignadas: 0 de '+animal.qty+'</p>';
+          const grid=block.querySelector('.prep-grid');
+          preps.forEach(p=>{
+            const price=basePrices[animal.name+'|'+p.name]??'';
+            const item=document.createElement('div');item.className='prep-item';
+            item.innerHTML='<button type="button" class="btn viz-tile" aria-pressed="false"><h3>'+p.icon+'</h3>'+p.name+'</button><div class="price-row"><label class="form-label">Piezas<input class="form-control pieces" type="number" min="0" max="'+animal.qty+'" step="1" value="0"></label><label class="form-label">€/pieza<input class="form-control price" type="number" min="0" step="0.10" value="'+price+'"></label></div>'+(p.name==='Otros'?'<input class="form-control other-prep" placeholder="Escriba la preparación">':'');
+            const pieces=item.querySelector('.pieces'),tile=item.querySelector('.viz-tile');
+            const update=()=>updateAllocation(block,pieces);
+            tile.onclick=()=>{
+              if(Number(pieces.value)>0)pieces.value=0;
+              else if(Number(pieces.max)>0)pieces.value=1;
+              update();
+            };
+            pieces.oninput=update;item.querySelector('.price').oninput=()=>updateAllocation(block);grid.appendChild(item);
+          });
+          box.appendChild(block);
+          updateAllocation(block);
+        });
+      }
+
+      function updateAllocation(block,changed){
+        const fields=[...block.querySelectorAll('.pieces')],received=Number(block.dataset.received);
+        if(changed){
+          const others=fields.filter(x=>x!==changed).reduce((s,x)=>s+(Number(x.value)||0),0);
+          const allowed=Math.max(0,received-others);
+          changed.value=Math.min(allowed,Math.max(0,Math.floor(Number(changed.value)||0)));
+        }
+        const total=fields.reduce((s,x)=>s+(Number(x.value)||0),0);
+        fields.forEach(field=>{
+          const others=total-(Number(field.value)||0);
+          field.max=Math.max(0,received-others);
+          field.disabled=total>=received&&Number(field.value)===0;
+          const tile=field.closest('.prep-item').querySelector('.viz-tile');
+          tile.disabled=field.disabled;
+          tile.setAttribute('aria-pressed',Number(field.value)>0?'true':'false');
+        });
+        const remaining=Math.max(0,received-total);
+        block.querySelector('.allocation').textContent=remaining===0
+          ?'Asignadas: '+total+' de '+received+' · Completo ✓'
+          :'Asignadas: '+total+' de '+received+' · Quedan '+remaining;
+      }
+
+      function collectLines(){
+        const out=[];let valid=true,problem='';
+        root.querySelectorAll('.prep-block').forEach(block=>{
+          const received=Number(block.dataset.received),animal=block.dataset.animal;
+          let assigned=0;
+          block.querySelectorAll('.prep-item').forEach((item,i)=>{
+            const qty=Number(item.querySelector('.pieces').value)||0,price=Number(item.querySelector('.price').value)||0;
+            if(qty>0){let prep=preps[i].name;if(prep==='Otros')prep=item.querySelector('.other-prep').value.trim()||'Preparación especial';out.push({animal,prep,qty,price,subtotal:qty*price});assigned+=qty;}
+          });
+          if(assigned!==received){valid=false;problem=animal+': ha asignado '+assigned+' de '+received+' piezas.';}
+        });
+        return{valid,problem,lines:out};
+      }
+
+      root.querySelector('#to-dates').onclick=()=>{
+        const result=collectLines();root.querySelector('#prep-error').textContent=result.valid?'':result.problem;
+        if(!result.valid)return;lines=result.lines;go(4);
+      };
+
+      const shop='LA POLLERÍA 2.0\nMercado de Chamartín · Puestos 61-62 · Planta alta\n28016 Madrid\nTeléfono: 91 457 15 89';
+      const safety='⚠️ AVISO IMPORTANTE SOBRE LA CONSERVACIÓN DE SU CAZA\n\nLa caza es un producto fresco y debe mantenerse refrigerada desde que llegue a casa después de la jornada. Recomendamos eviscerar las piezas en el campo para facilitar su enfriamiento y evitar fermentaciones o la posible aparición de huevos y larvas de mosca.\n\nRecuerde que una terraza no sustituye a una nevera. Si las piezas no se han eviscerado en el campo, recomendamos enfriarlas inmediatamente. Puede introducirlas brevemente en el congelador para bajar su temperatura antes de conservarlas correctamente refrigeradas.\n\nCualquier pieza sin eviscerar, mal conservada, con signos de fermentación o que no se encuentre en condiciones adecuadas será descartada y no se destinará al consumo.\n\nMuchas gracias por su comprensión.';
+      function nextNumber(){const year=new Date().getFullYear(),max=orders.filter(o=>String(o.number).startsWith('C'+year+'-')).map(o=>Number(o.number.split('-').pop())||0);return'C'+year+'-'+String((max.length?Math.max(...max):0)+1).padStart(3,'0');}
+      function total(){return lines.reduce((s,x)=>s+x.subtotal,0);}
+      function confirmation(name,received,pickup){
+        return'Hola, '+name+'.\n\nLe confirmamos la recepción de su encargo nº '+currentNumber+'.\n\nANIMALES ENTREGADOS:\n'+received.map(x=>'• '+x.qty+' '+x.name).join('\n')+'\n\nFORMA DE PREPARACIÓN E IMPORTES:\n'+lines.map(x=>'• '+x.qty+' '+x.animal+' · '+x.prep+' × '+money(x.price)+' = '+money(x.subtotal)).join('\n')+'\n\nIMPORTE TOTAL: '+money(total())+'\n\nFecha prevista de recogida: '+pretty(pickup)+'.\n\n'+safety+'\n\n'+shop;
+      }
+
+      root.querySelector('#to-summary').onclick=()=>{
+        const pickup=root.querySelector('#pickup-date').value;if(!pickup){alert('Indique la fecha prevista de recogida.');return;}
+        const name=root.querySelector('#client-name').value.trim()||'Cliente',phone=root.querySelector('#client-phone').value.trim()||'Sin teléfono',received=receivedAnimals();
+        currentNumber=nextNumber();currentMessage=confirmation(name,received,pickup);
+        root.querySelector('#summary').innerHTML='<div class="summary-row"><span class="text-muted">Encargo</span><strong>'+currentNumber+'</strong></div><div class="summary-row"><span class="text-muted">Cliente</span><span>'+name+' · '+phone+'</span></div><div class="summary-row"><span class="text-muted">Entregado</span><span>'+received.map(x=>x.qty+' '+x.name).join('<br>')+'</span></div><div class="summary-row"><span class="text-muted">Preparación</span><span>'+lines.map(x=>x.qty+' '+x.animal+' · '+x.prep+' · '+money(x.subtotal)).join('<br>')+'</span></div><div class="summary-row"><span class="text-muted">Total</span><strong>'+money(total())+'</strong></div><div class="summary-row"><span class="text-muted">Recogida</span><strong>'+pretty(pickup)+'</strong></div>';
+        root.querySelector('#whatsapp-preview').textContent=currentMessage;go(5);
+      };
+
+      const openWhatsApp=(phone,message)=>{let n=phone.replace(/\D/g,'');if(n.length===9)n='34'+n;if(!n){alert(message);return;}window.location.href='https://wa.me/'+n+'?text='+encodeURIComponent(message);};
+      root.querySelector('#confirm-order').onclick=()=>{
+        const paymentStatus=root.querySelector('#payment-status').value;
+        const order={number:currentNumber,name:root.querySelector('#client-name').value.trim()||'Cliente',phone:root.querySelector('#client-phone').value.trim(),received:receivedAnimals(),lines:lines.map(x=>({...x,status:'Pendiente',preparedNotifiedAt:null,deliveredAt:null})),receivedDate:root.querySelector('#received-date').value,pickupDate:root.querySelector('#pickup-date').value,paymentStatus,paid:paymentStatus==='Pagado'?total():(Number(root.querySelector('#paid-amount').value)||0),status:'Recibido',total:total(),preparedNotifiedAt:null};
+        orders.push(order);save();openWhatsApp(order.phone,currentMessage);show('saved-screen',null);root.querySelector('#saved-text').textContent='El encargo '+order.number+' ha quedado guardado con un total de '+money(order.total)+'.';
+      };
+
+      function preparedMessage(o){
+        const ready=o.lines.filter(x=>x.status==='Preparado');
+        const pending=o.lines.filter(x=>x.status==='Pendiente');
+        const partial=pending.length>0||o.lines.some(x=>x.status==='Entregado');
+        const readyTotal=ready.reduce((sum,x)=>sum+x.subtotal,0);
+        return'Hola, '+o.name+'.\n\n'+(partial?'Le informamos de que ya está preparada una parte de su encargo nº ':'Le informamos de que su encargo nº ')+o.number+(partial?' y puede pasar a retirarla.':' y puede pasar a recogerlo.')+'\n\n'+(partial?'PREPARADO PARA RECOGER:':'RESUMEN DEL ENCARGO:')+'\n'+ready.map(x=>'• '+x.qty+' '+x.animal+' · '+x.prep+': '+money(x.subtotal)).join('\n')+'\n\n'+(partial?'IMPORTE DE ESTA ENTREGA: '+money(readyTotal)+'\nIMPORTE TOTAL DEL ENCARGO: ':'IMPORTE TOTAL: ')+money(o.total)+(pending.length?'\n\nPENDIENTE DE PREPARAR:\n'+pending.map(x=>'• '+x.qty+' '+x.animal+' · '+x.prep).join('\n')+'\n\nLe avisaremos de nuevo cuando esta parte esté lista.':'')+'\n\nSi le resulta posible, le agradeceríamos que realizara el pago en efectivo. No es obligatorio, pero nos ayuda mucho y agradecemos que pueda traer el importe en metálico.\n\nMuchas gracias.\n\n'+shop;
+      }
+
+      function normalizeOrder(o){
+        o.lines.forEach(x=>{
+          if(!x.status)x.status=o.status==='Entregado'?'Entregado':o.status==='Preparado'?'Preparado':'Pendiente';
+          if(x.preparedNotifiedAt===undefined)x.preparedNotifiedAt=null;
+          if(x.deliveredAt===undefined)x.deliveredAt=null;
+        });
+      }
+
+      function refreshOrderStatus(o){
+        if(o.lines.every(x=>x.status==='Entregado')){
+          o.status='Entregado';o.paymentStatus='Pagado';o.paid=o.total;
+        }else if(o.lines.some(x=>x.status==='Preparado'||x.status==='Entregado')){
+          o.status='Entrega parcial';
+        }else{
+          o.status='Recibido';
+        }
+      }
+
+      function lineStatusLabel(status){
+        return status==='Entregado'?'✅ Entregado':status==='Preparado'?'🟠 Preparado':'⏳ Pendiente';
+      }
+
+      function renderOrders(){
+        const q=root.querySelector('#order-search').value.toLowerCase(),date=root.querySelector('#orders-date').value,list=root.querySelector('#orders-list');list.innerHTML='';
+        orders.forEach(normalizeOrder);
+        orders.filter(o=>o.status!=='Entregado'&&(!q||(o.number+' '+o.name+' '+o.phone).toLowerCase().includes(q))&&(!date||o.receivedDate===date)).sort((a,b)=>b.receivedDate.localeCompare(a.receivedDate)||b.number.localeCompare(a.number)).forEach(o=>{
+          const row=document.createElement('div');row.className='order';
+          row.innerHTML='<strong>'+o.number+'</strong><div><strong>'+o.name+'</strong> · '+o.phone+'<br><span class="text-small text-muted">'+o.received.map(x=>x.qty+' '+x.name).join(' · ')+'</span><br><strong>'+money(o.total)+' · '+o.status+'</strong><div class="order-lines"></div></div><div class="order-actions"><button type="button" class="btn btn-primary notify">📲 Avisar por WhatsApp</button></div>';
+          const lineBox=row.querySelector('.order-lines');
+          o.lines.forEach(x=>{
+            const line=document.createElement('div');line.className='order-line';
+            line.innerHTML='<span><strong>'+x.qty+' '+x.animal+'</strong> · '+x.prep+' · '+money(x.subtotal)+'</span><div class="line-actions"><span class="text-small">'+lineStatusLabel(x.status)+'</span>'+(x.status==='Pendiente'?'<button type="button" class="btn mark-ready">Marcar preparado</button>':x.status==='Preparado'?'<button type="button" class="btn deliver-line">Entregar</button><button type="button" class="btn undo-line">Corregir</button>':'')+'</div>';
+            const ready=line.querySelector('.mark-ready'),deliver=line.querySelector('.deliver-line'),undo=line.querySelector('.undo-line');
+            if(ready)ready.onclick=()=>{x.status='Preparado';refreshOrderStatus(o);save();renderOrders();};
+            if(deliver)deliver.onclick=()=>{x.status='Entregado';x.deliveredAt=new Date().toISOString();refreshOrderStatus(o);save();renderOrders();};
+            if(undo)undo.onclick=()=>{x.status='Pendiente';x.preparedNotifiedAt=null;refreshOrderStatus(o);save();renderOrders();};
+            lineBox.appendChild(line);
+          });
+          const notify=row.querySelector('.notify');
+          const readyLines=o.lines.filter(x=>x.status==='Preparado');
+          notify.disabled=!readyLines.length;
+          notify.onclick=()=>{
+            if(!readyLines.length){alert('Marque primero qué preparaciones están listas.');return;}
+            const stamp=new Date().toISOString();readyLines.forEach(x=>x.preparedNotifiedAt=stamp);o.preparedNotifiedAt=stamp;save();openWhatsApp(o.phone,preparedMessage(o));
+          };
+          list.appendChild(row);
+        });
+        save();
+        if(!list.children.length)list.innerHTML='<p class="text-muted">No hay encargos pendientes con estos criterios.</p>';
+      }
+
+      function renderSeason(){
+        const from=root.querySelector('#season-from').value,to=root.querySelector('#season-to').value,filtered=orders.filter(o=>(!from||o.receivedDate>=from)&&(!to||o.receivedDate<=to)&&o.status!=='Cancelado');
+        const billed=filtered.reduce((s,o)=>s+o.total,0),paid=filtered.reduce((s,o)=>s+Math.min(o.paid||0,o.total),0),pieces={};
+        filtered.forEach(o=>o.lines.forEach(x=>{const p=pieces[x.animal]??={qty:0,total:0};p.qty+=x.qty;p.total+=x.subtotal;}));
+        root.querySelector('#season-stats').innerHTML='<div class="card viz-stat"><span class="text-muted">Facturado</span><div class="viz-stat-value">'+money(billed)+'</div></div><div class="card viz-stat"><span class="text-muted">Cobrado</span><div class="viz-stat-value">'+money(paid)+'</div></div><div class="card viz-stat"><span class="text-muted">Pendiente</span><div class="viz-stat-value">'+money(billed-paid)+'</div></div><div class="card viz-stat"><span class="text-muted">Encargos</span><div class="viz-stat-value">'+filtered.length+'</div></div>';
+        root.querySelector('#season-body').innerHTML=Object.entries(pieces).sort().map(([name,v])=>'<tr><td>'+name+'</td><td class="text-end">'+v.qty+'</td><td class="text-end">'+money(v.total)+'</td></tr>').join('');
+      }
+
+      function reset(){
+        selected={};lines=[];currentNumber='';currentMessage='';root.querySelector('#client-name').value='';root.querySelector('#client-phone').value='';root.querySelectorAll('#animal-grid .qty').forEach(x=>x.value=0);root.querySelectorAll('#animal-grid .viz-tile').forEach(x=>x.setAttribute('aria-pressed','false'));root.querySelector('#other-animal-fields').hidden=true;root.querySelector('#received-date').value=today;root.querySelector('#pickup-date').value='';root.querySelector('#payment-status').value='Pendiente';root.querySelector('#paid-amount').value=0;go(1);
+      }
+      root.querySelector('#nav-new').onclick=reset;root.querySelector('#another-order').onclick=reset;
+      root.querySelector('#nav-orders').onclick=()=>{show('orders-screen',null);renderOrders();};
+      root.querySelector('#order-search').oninput=renderOrders;root.querySelector('#orders-date').onchange=renderOrders;
+      root.querySelector('#nav-season').onclick=()=>{show('season-screen',null);renderSeason();};
+      root.querySelector('#season-from').onchange=renderSeason;root.querySelector('#season-to').onchange=renderSeason;
+    })();
+  </script>
+</div>
+
+<script id="codex-visualization-floating-ui-core" src="https://unpkg.com/@floating-ui/core@1.7.3/dist/floating-ui.core.umd.min.js"></script>
+<script id="codex-visualization-floating-ui-dom" src="https://unpkg.com/@floating-ui/dom@1.7.4/dist/floating-ui.dom.umd.min.js"></script>
+<script id="codex-visualization-lucide" async src="https://unpkg.com/lucide@1.17.0/dist/umd/lucide.js"></script>
+<script id="codex-visualization-tooltip">/* oxlint-disable typescript/no-unsafe-argument, typescript/no-unsafe-call, typescript/no-unsafe-return */
+// Runs inside the visualization sandbox, not the host webview.
+(() => {
+  if (window.FloatingUIDOM == null) {
+    return;
+  }
+  const { autoUpdate, computePosition, flip, offset, shift, size } =
+    window.FloatingUIDOM;
+  const tooltipPlacements = new Set(["top", "right", "bottom", "left"]);
+  const tooltipId = `codex-visualization-tooltip-${
+    window.crypto?.randomUUID?.() ?? Date.now().toString(36)
+  }`;
+  const tooltipGap = 5;
+  const hoverDelay = 700;
+  const skipDelay = 300;
+  let activeTrigger = null;
+  let pendingTrigger = null;
+  let tooltip = null;
+  let openTimeout = null;
+  let autoUpdateCleanup = null;
+  let positionRequest = 0;
+  let skipDelayUntil = 0;
+
+  const getTrigger = (target) =>
+    target?.nodeType === Node.ELEMENT_NODE
+      ? target.closest("[data-tooltip]")
+      : null;
+  const containsTarget = (trigger, target) =>
+    target?.nodeType != null && trigger.contains(target);
+  const getContent = (trigger) =>
+    trigger.getAttribute("data-tooltip")?.trim() ?? "";
+  const getPlacement = (trigger) => {
+    const placement = trigger.getAttribute("data-tooltip-placement");
+    return tooltipPlacements.has(placement) ? placement : "top";
+  };
+  const getTooltip = () => {
+    if (tooltip == null) {
+      tooltip = document.createElement("div");
+      tooltip.id = tooltipId;
+      tooltip.className = "tooltip";
+      tooltip.setAttribute("role", "tooltip");
+    }
+    return tooltip;
+  };
+  const setDescribedBy = (trigger, described) => {
+    const ids = new Set(
+      (trigger.getAttribute("aria-describedby") ?? "")
+        .split(/\s+/)
+        .filter(Boolean),
+    );
+    if (described) {
+      ids.add(tooltipId);
+    } else {
+      ids.delete(tooltipId);
+    }
+    if (ids.size === 0) {
+      trigger.removeAttribute("aria-describedby");
+    } else {
+      trigger.setAttribute("aria-describedby", [...ids].join(" "));
+    }
+  };
+  const clearOpenTimeout = () => {
+    if (openTimeout != null) {
+      window.clearTimeout(openTimeout);
+      openTimeout = null;
+    }
+    pendingTrigger = null;
+  };
+  const closeTooltip = (activateSkipDelay = true) => {
+    clearOpenTimeout();
+    positionRequest += 1;
+    autoUpdateCleanup?.();
+    autoUpdateCleanup = null;
+    if (activeTrigger == null) {
+      return;
+    }
+    setDescribedBy(activeTrigger, false);
+    activeTrigger = null;
+    tooltip?.remove();
+    if (activateSkipDelay) {
+      skipDelayUntil = Date.now() + skipDelay;
+    }
+  };
+  const updatePosition = (trigger, floating) => {
+    const request = ++positionRequest;
+    void computePosition(trigger, floating, {
+      middleware: [
+        offset(tooltipGap),
+        flip({ padding: tooltipGap }),
+        shift({ padding: tooltipGap }),
+        size({
+          padding: tooltipGap,
+          apply({ availableHeight, availableWidth, elements }) {
+            elements.floating.style.setProperty(
+              "--tooltip-available-width",
+              `${Math.max(0, availableWidth)}px`,
+            );
+            elements.floating.style.setProperty(
+              "--tooltip-available-height",
+              `${Math.max(0, availableHeight)}px`,
+            );
+          },
+        }),
+      ],
+      placement: getPlacement(trigger),
+      strategy: "fixed",
+    })
+      .then(({ x, y }) => {
+        if (activeTrigger !== trigger || request !== positionRequest) {
+          return;
+        }
+        const scale = window.devicePixelRatio || 1;
+        floating.style.transform = `translate(${Math.round(x * scale) / scale}px, ${Math.round(y * scale) / scale}px)`;
+        floating.style.visibility = "visible";
+      })
+      .catch(() => {
+        if (activeTrigger === trigger && request === positionRequest) {
+          closeTooltip(false);
+        }
+      });
+  };
+  const openTooltip = (trigger) => {
+    const content = getContent(trigger);
+    if (!trigger.isConnected || content.length === 0) {
+      return;
+    }
+    clearOpenTimeout();
+    if (activeTrigger === trigger) {
+      return;
+    }
+    closeTooltip();
+    const floating = getTooltip();
+    floating.textContent = content;
+    floating.style.visibility = "hidden";
+    floating.style.transform = "translate(0, 0)";
+    document.body.appendChild(floating);
+    activeTrigger = trigger;
+    setDescribedBy(trigger, true);
+    autoUpdateCleanup = autoUpdate(trigger, floating, () => {
+      updatePosition(trigger, floating);
+    });
+  };
+  const requestOpen = (trigger, immediate = false) => {
+    if (
+      getContent(trigger).length === 0 ||
+      activeTrigger === trigger ||
+      pendingTrigger === trigger
+    ) {
+      return;
+    }
+    clearOpenTimeout();
+    pendingTrigger = trigger;
+    const delay =
+      immediate || activeTrigger != null || Date.now() < skipDelayUntil
+        ? 0
+        : hoverDelay;
+    if (delay === 0) {
+      openTooltip(trigger);
+      return;
+    }
+    openTimeout = window.setTimeout(() => {
+      openTimeout = null;
+      pendingTrigger = null;
+      openTooltip(trigger);
+    }, delay);
+  };
+  const handlePointerOpen = (event) => {
+    if (event.pointerType === "touch") {
+      return;
+    }
+    const trigger = getTrigger(event.target);
+    if (trigger == null || containsTarget(trigger, event.relatedTarget)) {
+      return;
+    }
+    requestOpen(trigger);
+  };
+  const handleLeave = (event) => {
+    const trigger = getTrigger(event.target);
+    if (trigger == null || containsTarget(trigger, event.relatedTarget)) {
+      return;
+    }
+    if (activeTrigger === trigger || pendingTrigger === trigger) {
+      closeTooltip();
+    }
+  };
+  const handleFocusIn = (event) => {
+    const trigger = getTrigger(event.target);
+    if (trigger?.matches(":focus-visible")) {
+      requestOpen(trigger, true);
+    }
+  };
+  const handleKeyDown = (event) => {
+    if (event.key === "Escape") {
+      closeTooltip();
+    }
+  };
+  const handleContextMenu = (event) => {
+    const trigger = getTrigger(event.target);
+    if (activeTrigger === trigger || pendingTrigger === trigger) {
+      closeTooltip();
+    }
+  };
+  const destroy = () => {
+    closeTooltip(false);
+    document.removeEventListener("pointerover", handlePointerOpen);
+    document.removeEventListener("pointerout", handleLeave);
+    document.removeEventListener("focusin", handleFocusIn);
+    document.removeEventListener("focusout", handleLeave);
+    document.removeEventListener("keydown", handleKeyDown);
+    document.removeEventListener("contextmenu", handleContextMenu);
+    tooltip = null;
+  };
+
+  document.addEventListener("pointerover", handlePointerOpen);
+  document.addEventListener("pointerout", handleLeave);
+  document.addEventListener("focusin", handleFocusIn);
+  document.addEventListener("focusout", handleLeave);
+  document.addEventListener("keydown", handleKeyDown);
+  document.addEventListener("contextmenu", handleContextMenu);
+  window.addEventListener("pagehide", destroy, { once: true });
+})();
+</script>
+<script id="codex-visualization-lucide-initialization">(() => {
+  const initialize = () => {
+    globalThis.lucide?.createIcons({ attrs: { width: 16, height: 16 } });
+  };
+  if (globalThis.lucide != null) {
+    initialize();
+    return;
+  }
+  document
+    .getElementById("codex-visualization-lucide")
+    ?.addEventListener("load", initialize, { once: true });
+})();
+</script>
+</body>
+</html>
