@@ -822,7 +822,37 @@ svg {
 <body>
 <div id="caza-app">
   <style>
-    #caza-app{--font-size-base:18px;padding:16px 20px}
+    #caza-app{--font-size-base:18px;--caza-orange:#ff7300;--caza-orange2:#ff9f2e;--caza-black:#101114;--caza-panel:#202228;--caza-panel2:#2b2e36;--caza-text:#f7f7f7;--caza-muted:#b8bbc3;--caza-line:#3b3e47;padding:16px 20px;min-height:100vh;background:var(--caza-black);color:var(--caza-text);font-family:Arial,sans-serif}
+    #caza-app .topbar{position:sticky;top:0;z-index:10;background:#090a0c;border-bottom:4px solid var(--caza-orange);padding:14px 16px;border-radius:14px}
+    #caza-app .brand h2{width:54px;height:54px;display:grid;place-items:center;background:var(--caza-orange);border-radius:14px}
+    #caza-app h2,#caza-app h3,#caza-app strong{color:var(--caza-text)}
+    #caza-app .text-muted{color:var(--caza-muted)}
+    #caza-app .card{background:var(--caza-panel);color:var(--caza-text)}
+    #caza-app .btn{background:#2a2d34;color:#fff;border-color:#484b55;font-weight:700}
+    #caza-app .btn-primary{background:var(--caza-orange);color:#111;border-color:transparent;font-weight:900}
+    #caza-app .form-control,#caza-app .form-select{background:#f5f5f5;color:#171717;border:0}
+    #caza-app .steps{background:#17191e;border-radius:14px;padding:7px}
+    #caza-app .step.on{border-color:var(--caza-orange);color:#fff}
+    #caza-app .animal-choice{background:var(--caza-panel);padding:10px;border-radius:17px;border:2px solid transparent}
+    #caza-app .animal-choice:nth-child(10n+1){border-color:#ff8a3d;background:#2b211c}
+    #caza-app .animal-choice:nth-child(10n+2){border-color:#ffd057;background:#2b281c}
+    #caza-app .animal-choice:nth-child(10n+3){border-color:#48b8ff;background:#1d2830}
+    #caza-app .animal-choice:nth-child(10n+4){border-color:#d49cff;background:#292130}
+    #caza-app .animal-choice:nth-child(10n+5){border-color:#62d58b;background:#1c2b22}
+    #caza-app .animal-choice:nth-child(10n+6){border-color:#56d5cf;background:#1b2b2b}
+    #caza-app .animal-choice:nth-child(10n+7){border-color:#ff82ad;background:#2d1f25}
+    #caza-app .animal-choice:nth-child(10n+8){border-color:#a9b4ff;background:#222633}
+    #caza-app .animal-choice:nth-child(10n+9){border-color:#ec9b5d;background:#2c241e}
+    #caza-app .animal-choice:nth-child(10n){border-color:#b4bac5;background:#282a30}
+    #caza-app .animal-choice .viz-tile{background:#15171b;border:0}
+    #caza-app .animal-choice .viz-tile[aria-pressed="true"]{background:var(--caza-orange);color:#111;box-shadow:0 0 0 3px #fff}
+    #caza-app .animal-photo{box-shadow:0 5px 14px rgba(0,0,0,.35)}
+    #caza-app .qty-row .plus{background:var(--caza-orange);color:#111;font-size:27px}
+    #caza-app .qty-row .minus{font-size:27px}
+    #caza-app .prep-block,#caza-app .order,#caza-app .order-line,#caza-app .summary-row{border-color:var(--caza-line)}
+    #caza-app .prep-item{background:var(--caza-panel);border-radius:15px;padding:10px}
+    #caza-app .prep-item>.btn{background:#30333b}
+    #caza-app .provider-box{border-left:6px solid var(--caza-orange)}
     #caza-app .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}
     #caza-app .brand{display:flex;align-items:center;gap:10px}
     #caza-app .nav{display:flex;gap:8px;flex-wrap:wrap}
