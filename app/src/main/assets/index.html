@@ -877,10 +877,22 @@ svg {
     #caza-app .qty-row .btn,#caza-app .qty-row .form-control{min-height:54px}
     #caza-app .qty-row .form-control{text-align:center}
     #caza-app .prep-block{display:grid;gap:14px;padding-bottom:22px;border-bottom:2px solid var(--border)}
-    #caza-app .prep-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
-    #caza-app .prep-item{display:grid;gap:10px;text-align:center}
-    #caza-app .prep-item>.btn{width:100%;min-height:76px}
-    #caza-app .prep-price{display:grid;gap:6px}
+    #caza-app .prep-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+    #caza-app .prep-item{display:grid;gap:11px;text-align:left;padding:15px!important;border:2px solid #454954}
+    #caza-app .prep-item.active{border-color:var(--caza-orange);background:#34271d;box-shadow:0 0 0 2px rgba(255,115,0,.16)}
+    #caza-app .prep-head{display:flex;align-items:center;gap:10px;font-size:20px}
+    #caza-app .prep-icon{font-size:30px}
+    #caza-app .prep-counter{display:grid;grid-template-columns:56px minmax(70px,1fr) 56px;gap:9px;align-items:center}
+    #caza-app .prep-counter .btn,#caza-app .prep-counter .form-control{min-height:58px;text-align:center}
+    #caza-app .prep-counter .btn{font-size:28px}
+    #caza-app .prep-counter .prep-plus{background:var(--caza-orange);color:#111}
+    #caza-app .all-pieces{width:100%;min-height:46px;background:#3a3e47!important}
+    #caza-app .price-details{background:#17191e;border-radius:11px;padding:10px 12px}
+    #caza-app .price-details summary{font-weight:800;color:#ffc07a}
+    #caza-app .price-details .prep-price{display:grid;gap:6px;margin-top:10px}
+    #caza-app .other-prep[hidden]{display:none!important}
+    #caza-app .allocation{padding:12px 15px;border-radius:12px;background:#17191e;font-size:18px!important;font-weight:900;color:#fff!important}
+    #caza-app .allocation.complete{background:#19472d;color:#7df0a9!important}
     #caza-app .actions{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
     #caza-app .actions .btn{min-height:54px}
     #caza-app .summary{display:grid;gap:10px}
@@ -1134,17 +1146,14 @@ svg {
           preps.forEach(p=>{
             const price=basePrices[animal.name+'|'+p.name]??'';
             const item=document.createElement('div');item.className='prep-item';
-            item.innerHTML='<button type="button" class="btn viz-tile" aria-pressed="false"><h3>'+p.icon+'</h3>'+p.name+'</button><label class="form-label">Piezas<div class="qty-row"><button type="button" class="btn prep-minus" aria-label="Quitar una pieza">−</button><input class="form-control pieces" type="number" min="0" max="'+animal.qty+'" step="1" value="0"><button type="button" class="btn prep-plus" aria-label="Añadir una pieza">＋</button></div></label><label class="form-label prep-price">Precio por pieza (€)<input class="form-control price" type="number" min="0" step="0.10" value="'+price+'"></label>'+(p.name==='Otros'?'<input class="form-control other-prep" placeholder="Escriba la preparación">':'');
-            const pieces=item.querySelector('.pieces'),tile=item.querySelector('.viz-tile');
+            const shownPrice=price===''?'Escribir precio':money(price)+'/pieza';
+            item.innerHTML='<div class="prep-head"><span class="prep-icon">'+p.icon+'</span><strong>'+p.name+'</strong></div><div class="prep-counter"><button type="button" class="btn prep-minus" aria-label="Quitar una pieza">−</button><input class="form-control pieces" type="number" min="0" max="'+animal.qty+'" step="1" value="0" aria-label="Piezas para '+p.name+'"><button type="button" class="btn prep-plus" aria-label="Añadir una pieza">＋</button></div><button type="button" class="btn all-pieces">PONER TODAS LAS QUE QUEDAN</button><details class="price-details"><summary>💶 <span class="price-label">'+shownPrice+'</span> · Cambiar precio</summary><label class="form-label prep-price">Precio por pieza (€)<input class="form-control price" type="number" min="0" step="0.10" value="'+price+'"></label></details>'+(p.name==='Otros'?'<input class="form-control other-prep" hidden placeholder="Escriba la preparación">':'');
+            const pieces=item.querySelector('.pieces'),priceField=item.querySelector('.price');
             const update=()=>updateAllocation(block,pieces);
-            tile.onclick=()=>{
-              if(Number(pieces.value)>0)pieces.value=0;
-              else if(Number(pieces.max)>0)pieces.value=1;
-              update();
-            };
             item.querySelector('.prep-minus').onclick=()=>{pieces.value=Math.max(0,Number(pieces.value)-1);update();};
             item.querySelector('.prep-plus').onclick=()=>{if(!pieces.disabled&&Number(pieces.value)<Number(pieces.max)){pieces.value=Number(pieces.value)+1;update();}};
-            pieces.oninput=update;item.querySelector('.price').oninput=()=>updateAllocation(block);grid.appendChild(item);
+            item.querySelector('.all-pieces').onclick=()=>{pieces.value=Number(pieces.max);update();};
+            pieces.oninput=update;priceField.oninput=()=>{item.querySelector('.price-label').textContent=priceField.value?money(priceField.value)+'/pieza':'Escribir precio';updateAllocation(block);};grid.appendChild(item);
           });
           box.appendChild(block);
           updateAllocation(block);
@@ -1163,18 +1172,19 @@ svg {
           const others=total-(Number(field.value)||0);
           field.max=Math.max(0,received-others);
           field.disabled=total>=received&&Number(field.value)===0;
-          const tile=field.closest('.prep-item').querySelector('.viz-tile');
-          const minus=field.closest('.prep-item').querySelector('.prep-minus');
-          const plus=field.closest('.prep-item').querySelector('.prep-plus');
-          tile.disabled=field.disabled;
+          const item=field.closest('.prep-item'),minus=item.querySelector('.prep-minus'),plus=item.querySelector('.prep-plus'),all=item.querySelector('.all-pieces'),other=item.querySelector('.other-prep');
           minus.disabled=Number(field.value)<=0;
           plus.disabled=field.disabled||Number(field.value)>=Number(field.max);
-          tile.setAttribute('aria-pressed',Number(field.value)>0?'true':'false');
+          all.disabled=Number(field.max)<=0;
+          item.classList.toggle('active',Number(field.value)>0);
+          if(other)other.hidden=Number(field.value)<=0;
         });
         const remaining=Math.max(0,received-total);
-        block.querySelector('.allocation').textContent=remaining===0
-          ?'Asignadas: '+total+' de '+received+' · Completo ✓'
-          :'Asignadas: '+total+' de '+received+' · Quedan '+remaining;
+        const allocation=block.querySelector('.allocation');
+        allocation.classList.toggle('complete',remaining===0);
+        allocation.textContent=remaining===0
+          ?'✅ COMPLETO · '+total+' de '+received+' piezas asignadas'
+          :'📦 Entregadas: '+received+' · Asignadas: '+total+' · QUEDAN: '+remaining;
       }
 
       function collectLines(){
