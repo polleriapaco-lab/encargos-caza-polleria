@@ -832,6 +832,10 @@ svg {
     #caza-app .step.on{border-color:var(--viz-series-1);color:var(--foreground)}
     #caza-app .screen{display:grid;gap:20px}
     #caza-app .fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+    #caza-app .client-lookup{display:grid;gap:10px}
+    #caza-app .client-suggestions{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:9px}
+    #caza-app .client-suggestions .btn{width:100%;min-height:54px;justify-content:flex-start;text-align:left;white-space:normal}
+    #caza-app .agenda-client{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--border)}
     #caza-app .form-control,#caza-app .form-select{min-height:54px}
     #caza-app .animal-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
     #caza-app .animal-choice{display:grid;gap:10px;text-align:center}
@@ -872,6 +876,7 @@ svg {
     <div class="nav">
       <button type="button" class="btn btn-primary" id="nav-new">＋ Encargo</button>
       <button type="button" class="btn" id="nav-orders">📋 Encargos</button>
+      <button type="button" class="btn" id="nav-clients">📒 Clientes</button>
       <button type="button" class="btn" id="nav-season">📊 Temporada</button>
     </div>
   </div>
@@ -886,6 +891,11 @@ svg {
 
   <section class="screen" id="screen-1">
     <h3>Datos del cliente</h3>
+    <div class="client-lookup card">
+      <label class="form-label">🔎 Buscar cliente habitual<input class="form-control" id="client-search" autocomplete="off" placeholder="Escriba su nombre o teléfono"></label>
+      <div class="client-suggestions" id="client-suggestions"></div>
+      <p class="text-small text-muted" id="client-status">Si es un cliente nuevo, escriba sus datos debajo. Se guardará automáticamente al confirmar el encargo.</p>
+    </div>
     <div class="fields">
       <label class="form-label">Nombre completo<input class="form-control" id="client-name" placeholder="Nombre del cliente"></label>
       <label class="form-label">Teléfono / WhatsApp<input class="form-control" id="client-phone" inputmode="tel" placeholder="Ej. 612 345 678"></label>
@@ -941,6 +951,14 @@ svg {
     <div id="orders-list"></div>
   </section>
 
+  <section class="screen" id="clients-screen" hidden>
+    <div class="viz-controls">
+      <label class="form-label">Buscar en la agenda<input class="form-control" id="agenda-search" placeholder="Nombre o teléfono"></label>
+    </div>
+    <p class="text-muted" id="agenda-count"></p>
+    <div id="agenda-list"></div>
+  </section>
+
   <section class="screen" id="season-screen" hidden>
     <div class="viz-controls">
       <label class="form-label">Desde<input class="form-control" id="season-from" type="date"></label>
@@ -968,14 +986,54 @@ svg {
         'Pato|Pelar / preparar':8,'Conejo|Pelar / preparar':5,
         'Paloma|Pelar / preparar':3.8,'Zorzal|Pelar / preparar':2.5
       };
-      let selected={},lines=[],orders=JSON.parse(localStorage.getItem('caza_orders')||'[]'),currentNumber='',currentMessage='';
+      let selected={},lines=[],orders=JSON.parse(localStorage.getItem('caza_orders')||'[]'),clients=JSON.parse(localStorage.getItem('caza_clients')||'[]'),currentNumber='',currentMessage='',selectedClientId=null;
       const save=()=>localStorage.setItem('caza_orders',JSON.stringify(orders));
+      const saveClients=()=>localStorage.setItem('caza_clients',JSON.stringify(clients));
+      const phoneKey=value=>String(value||'').replace(/\D/g,'').slice(-9);
+      const nameKey=value=>String(value||'').trim().toLocaleLowerCase('es-ES');
+      function upsertClient(name,phone){
+        name=String(name||'').trim();phone=String(phone||'').trim();
+        if(!name||!phoneKey(phone))return null;
+        let client=clients.find(c=>phoneKey(c.phone)===phoneKey(phone))||clients.find(c=>nameKey(c.name)===nameKey(name));
+        if(client){client.name=name;client.phone=phone;client.lastOrderAt=new Date().toISOString();}
+        else{client={id:'cli-'+Date.now()+'-'+Math.random().toString(36).slice(2,7),name,phone,lastOrderAt:new Date().toISOString()};clients.push(client);}
+        saveClients();return client;
+      }
+      orders.forEach(o=>{if(o.name&&o.phone&&phoneKey(o.phone)&&!clients.some(c=>phoneKey(c.phone)===phoneKey(o.phone)))clients.push({id:'cli-old-'+phoneKey(o.phone),name:o.name,phone:o.phone,lastOrderAt:o.receivedDate||''});});
+      saveClients();
       const money=n=>Number(n||0).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2})+' €';
       const localIso=d=>{const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return y+'-'+m+'-'+day;};
       const pretty=d=>new Intl.DateTimeFormat('es-ES',{day:'numeric',month:'long',year:'numeric'}).format(new Date(d+'T12:00:00'));
       const today=localIso(new Date());
       root.querySelector('#received-date').value=today;
       root.querySelector('#pickup-date').min=today;
+
+      function chooseClient(client){
+        selectedClientId=client.id;
+        root.querySelector('#client-name').value=client.name;
+        root.querySelector('#client-phone').value=client.phone;
+        root.querySelector('#client-search').value=client.name;
+        root.querySelector('#client-suggestions').innerHTML='';
+        root.querySelector('#client-status').textContent='✅ Cliente encontrado en la agenda. Sus datos ya están rellenados.';
+      }
+      function matchingClients(query){
+        const q=nameKey(query),digits=phoneKey(query);
+        if(!q&&!digits)return[];
+        return clients.filter(c=>nameKey(c.name).includes(q)||(digits&&phoneKey(c.phone).includes(digits))).sort((a,b)=>a.name.localeCompare(b.name,'es')).slice(0,8);
+      }
+      function renderClientSuggestions(){
+        const box=root.querySelector('#client-suggestions'),matches=matchingClients(root.querySelector('#client-search').value);box.innerHTML='';
+        matches.forEach(client=>{const button=document.createElement('button');button.type='button';button.className='btn';button.textContent='👤 '+client.name+' · '+client.phone;button.onclick=()=>chooseClient(client);box.appendChild(button);});
+        root.querySelector('#client-status').textContent=matches.length?matches.length+' cliente'+(matches.length===1?' encontrado':'s encontrados')+'. Toque uno para rellenar sus datos.':'Si es un cliente nuevo, escriba sus datos debajo. Se guardará automáticamente al confirmar el encargo.';
+      }
+      function renderAgenda(){
+        const q=root.querySelector('#agenda-search').value,box=root.querySelector('#agenda-list'),matches=q?matchingClients(q):[...clients].sort((a,b)=>a.name.localeCompare(b.name,'es'));box.innerHTML='';
+        root.querySelector('#agenda-count').textContent=matches.length+' cliente'+(matches.length===1?' guardado':'s guardados');
+        matches.forEach(client=>{const row=document.createElement('div');row.className='agenda-client';const data=document.createElement('div');const name=document.createElement('strong');name.textContent=client.name;const phone=document.createElement('div');phone.className='text-muted';phone.textContent=client.phone;data.append(name,phone);const use=document.createElement('button');use.type='button';use.className='btn btn-primary';use.textContent='Nuevo encargo';use.onclick=()=>{reset();chooseClient(client);};row.append(data,use);box.appendChild(row);});
+        if(!matches.length)box.innerHTML='<p class="text-muted">No se ha encontrado ningún cliente.</p>';
+      }
+      root.querySelector('#client-search').oninput=renderClientSuggestions;
+      root.querySelector('#agenda-search').oninput=renderAgenda;
 
       function show(id,step=null){
         root.querySelectorAll('section.screen').forEach(x=>x.hidden=true);
@@ -1099,7 +1157,8 @@ svg {
       root.querySelector('#confirm-order').onclick=()=>{
         const paymentStatus=root.querySelector('#payment-status').value;
         const order={number:currentNumber,name:root.querySelector('#client-name').value.trim()||'Cliente',phone:root.querySelector('#client-phone').value.trim(),received:receivedAnimals(),lines:lines.map(x=>({...x,status:'Pendiente',preparedNotifiedAt:null,deliveredAt:null})),receivedDate:root.querySelector('#received-date').value,pickupDate:root.querySelector('#pickup-date').value,paymentStatus,paid:paymentStatus==='Pagado'?total():(Number(root.querySelector('#paid-amount').value)||0),status:'Recibido',total:total(),preparedNotifiedAt:null};
-        orders.push(order);save();openWhatsApp(order.phone,currentMessage);show('saved-screen',null);root.querySelector('#saved-text').textContent='El encargo '+order.number+' ha quedado guardado con un total de '+money(order.total)+'.';
+        const savedClient=upsertClient(order.name,order.phone);if(savedClient)selectedClientId=savedClient.id;
+        orders.push(order);save();openWhatsApp(order.phone,currentMessage);show('saved-screen',null);root.querySelector('#saved-text').textContent='El encargo '+order.number+' ha quedado guardado con un total de '+money(order.total)+(savedClient?' y el cliente se ha guardado en la agenda.':'.');
       };
 
       function preparedMessage(o){
@@ -1170,10 +1229,11 @@ svg {
       }
 
       function reset(){
-        selected={};lines=[];currentNumber='';currentMessage='';root.querySelector('#client-name').value='';root.querySelector('#client-phone').value='';root.querySelectorAll('#animal-grid .qty').forEach(x=>x.value=0);root.querySelectorAll('#animal-grid .viz-tile').forEach(x=>x.setAttribute('aria-pressed','false'));root.querySelector('#other-animal-fields').hidden=true;root.querySelector('#received-date').value=today;root.querySelector('#pickup-date').value='';root.querySelector('#payment-status').value='Pendiente';root.querySelector('#paid-amount').value=0;go(1);
+        selected={};lines=[];currentNumber='';currentMessage='';selectedClientId=null;root.querySelector('#client-name').value='';root.querySelector('#client-phone').value='';root.querySelector('#client-search').value='';root.querySelector('#client-suggestions').innerHTML='';root.querySelector('#client-status').textContent='Si es un cliente nuevo, escriba sus datos debajo. Se guardará automáticamente al confirmar el encargo.';root.querySelectorAll('#animal-grid .qty').forEach(x=>x.value=0);root.querySelectorAll('#animal-grid .viz-tile').forEach(x=>x.setAttribute('aria-pressed','false'));root.querySelector('#other-animal-fields').hidden=true;root.querySelector('#received-date').value=today;root.querySelector('#pickup-date').value='';root.querySelector('#payment-status').value='Pendiente';root.querySelector('#paid-amount').value=0;go(1);
       }
       root.querySelector('#nav-new').onclick=reset;root.querySelector('#another-order').onclick=reset;
       root.querySelector('#nav-orders').onclick=()=>{show('orders-screen',null);renderOrders();};
+      root.querySelector('#nav-clients').onclick=()=>{show('clients-screen',null);renderAgenda();};
       root.querySelector('#order-search').oninput=renderOrders;root.querySelector('#orders-date').onchange=renderOrders;
       root.querySelector('#nav-season').onclick=()=>{show('season-screen',null);renderSeason();};
       root.querySelector('#season-from').onchange=renderSeason;root.querySelector('#season-to').onchange=renderSeason;
