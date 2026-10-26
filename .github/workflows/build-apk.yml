@@ -25,7 +25,7 @@ jobs:
       - name: Crear firma permanente si es la primera compilación
         run: |
           if [ ! -f app/stable-debug.keystore ]; then
-            keytool -genkeypair -v               -keystore ~/.android/debug.keystore               -storepass android               -alias androiddebugkey               -keypass android               -dname "CN=La Polleria 2.0, OU=Aplicaciones, O=La Polleria 2.0, L=Madrid, C=ES"               -keyalg RSA -keysize 2048 -validity 10000
+            keytool -genkeypair -v -keystore app/stable-debug.keystore -storepass android -alias androiddebugkey -keypass android -dname "CN=La Polleria 2.0, OU=Aplicaciones, O=La Polleria 2.0, L=Madrid, C=ES" -keyalg RSA -keysize 2048 -validity 10000
           fi
       - name: Compilar APK
         run: gradle :app:assembleDebug
