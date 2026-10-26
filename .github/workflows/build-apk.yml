@@ -17,6 +17,17 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
+      - name: Recuperar firma permanente
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: encargos-caza-firma-android-v1
+      - name: Crear firma permanente si es la primera compilación
+        run: |
+          mkdir -p ~/.android
+          if [ ! -f ~/.android/debug.keystore ]; then
+            keytool -genkeypair -v               -keystore ~/.android/debug.keystore               -storepass android               -alias androiddebugkey               -keypass android               -dname "CN=La Polleria 2.0, OU=Aplicaciones, O=La Polleria 2.0, L=Madrid, C=ES"               -keyalg RSA -keysize 2048 -validity 10000
+          fi
       - name: Compilar APK
         run: gradle :app:assembleDebug
       - name: Guardar APK
