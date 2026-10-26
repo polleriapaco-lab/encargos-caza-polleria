@@ -855,6 +855,8 @@ svg {
     #caza-app .message{white-space:pre-line}
     #caza-app .order{display:grid;grid-template-columns:100px 1fr auto;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--border)}
     #caza-app .order-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
+    #caza-app .provider-box{display:grid;gap:12px;margin-bottom:4px}
+    #caza-app .provider-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
     #caza-app .order-lines{display:grid;gap:8px;margin-top:10px}
     #caza-app .order-line{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding-top:8px;border-top:1px solid var(--border)}
     #caza-app .line-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
@@ -944,6 +946,14 @@ svg {
   </section>
 
   <section class="screen" id="orders-screen" hidden>
+    <div class="card provider-box">
+      <div class="provider-head"><div><h3>📦 Resumen para el proveedor</h3><p class="text-small text-muted">Agrupa todas las piezas por animal y preparación.</p></div><button type="button" class="btn btn-primary" id="send-provider">📲 Enviar resumen al proveedor</button></div>
+      <div class="fields">
+        <label class="form-label">Nombre del proveedor<input class="form-control" id="provider-name" placeholder="Nombre o empresa"></label>
+        <label class="form-label">Teléfono / WhatsApp<input class="form-control" id="provider-phone" inputmode="tel" placeholder="Ej. 612 345 678"></label>
+      </div>
+      <p class="text-small text-muted">Con una fecha seleccionada se enviarán solo los encargos de ese día. Sin fecha se enviarán todos los encargos pendientes.</p>
+    </div>
     <div class="viz-controls">
       <label class="form-label">Buscar cliente o encargo<input class="form-control" id="order-search" placeholder="Nombre, teléfono o número"></label>
       <label class="form-label">Fecha de entrada<input class="form-control" id="orders-date" type="date"></label>
@@ -986,7 +996,7 @@ svg {
         'Pato|Pelar / preparar':8,'Conejo|Pelar / preparar':5,
         'Paloma|Pelar / preparar':3.8,'Zorzal|Pelar / preparar':2.5
       };
-      let selected={},lines=[],orders=JSON.parse(localStorage.getItem('caza_orders')||'[]'),clients=JSON.parse(localStorage.getItem('caza_clients')||'[]'),currentNumber='',currentMessage='',selectedClientId=null;
+      let selected={},lines=[],orders=JSON.parse(localStorage.getItem('caza_orders')||'[]'),clients=JSON.parse(localStorage.getItem('caza_clients')||'[]'),provider=JSON.parse(localStorage.getItem('caza_provider')||'{"name":"","phone":""}'),currentNumber='',currentMessage='',selectedClientId=null;
       const save=()=>localStorage.setItem('caza_orders',JSON.stringify(orders));
       const saveClients=()=>localStorage.setItem('caza_clients',JSON.stringify(clients));
       const phoneKey=value=>String(value||'').replace(/\D/g,'').slice(-9);
@@ -1007,6 +1017,11 @@ svg {
       const today=localIso(new Date());
       root.querySelector('#received-date').value=today;
       root.querySelector('#pickup-date').min=today;
+      root.querySelector('#provider-name').value=provider.name||'';
+      root.querySelector('#provider-phone').value=provider.phone||'';
+      const saveProvider=()=>{provider={name:root.querySelector('#provider-name').value.trim(),phone:root.querySelector('#provider-phone').value.trim()};localStorage.setItem('caza_provider',JSON.stringify(provider));};
+      root.querySelector('#provider-name').oninput=saveProvider;
+      root.querySelector('#provider-phone').oninput=saveProvider;
 
       function chooseClient(client){
         selectedClientId=client.id;
@@ -1154,6 +1169,22 @@ svg {
       };
 
       const openWhatsApp=(phone,message)=>{let n=phone.replace(/\D/g,'');if(n.length===9)n='34'+n;if(!n){alert(message);return;}window.location.href='https://wa.me/'+n+'?text='+encodeURIComponent(message);};
+      function providerSummary(){
+        saveProvider();
+        if(!phoneKey(provider.phone)){alert('Indique el teléfono del proveedor.');return;}
+        const date=root.querySelector('#orders-date').value;
+        orders.forEach(normalizeOrder);
+        const active=orders.filter(o=>o.status!=='Entregado'&&o.status!=='Cancelado'&&(!date||o.receivedDate===date));
+        const grouped={};let pieces=0;
+        active.forEach(o=>o.lines.filter(x=>x.status!=='Entregado').forEach(x=>{const key=x.animal+'|'+x.prep;grouped[key]=(grouped[key]||0)+Number(x.qty||0);pieces+=Number(x.qty||0);}));
+        const detail=Object.entries(grouped).sort((a,b)=>a[0].localeCompare(b[0],'es')).map(([key,qty])=>{const parts=key.split('|');return'• '+qty+' '+parts[0]+' · '+parts[1];});
+        if(!detail.length){alert(date?'No hay piezas pendientes para la fecha seleccionada.':'No hay piezas pendientes para enviar.');return;}
+        const greeting='Hola'+(provider.name?', '+provider.name:'')+'.';
+        const period=date?'FECHA: '+pretty(date):'TODOS LOS ENCARGOS PENDIENTES';
+        const message=greeting+'\n\nLe envío el resumen de piezas de La Pollería 2.0.\n\n'+period+'\n\nPIEZAS Y FORMA DE PREPARACIÓN:\n'+detail.join('\n')+'\n\nTOTAL DE PIEZAS: '+pieces+'\n\nMuchas gracias.\n\n'+shop;
+        openWhatsApp(provider.phone,message);
+      }
+      root.querySelector('#send-provider').onclick=providerSummary;
       root.querySelector('#confirm-order').onclick=()=>{
         const paymentStatus=root.querySelector('#payment-status').value;
         const order={number:currentNumber,name:root.querySelector('#client-name').value.trim()||'Cliente',phone:root.querySelector('#client-phone').value.trim(),received:receivedAnimals(),lines:lines.map(x=>({...x,status:'Pendiente',preparedNotifiedAt:null,deliveredAt:null})),receivedDate:root.querySelector('#received-date').value,pickupDate:root.querySelector('#pickup-date').value,paymentStatus,paid:paymentStatus==='Pagado'?total():(Number(root.querySelector('#paid-amount').value)||0),status:'Recibido',total:total(),preparedNotifiedAt:null};
