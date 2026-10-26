@@ -952,7 +952,7 @@ svg {
         <label class="form-label">Nombre del proveedor<input class="form-control" id="provider-name" placeholder="Nombre o empresa"></label>
         <label class="form-label">Teléfono / WhatsApp<input class="form-control" id="provider-phone" inputmode="tel" placeholder="Ej. 612 345 678"></label>
       </div>
-      <p class="text-small text-muted">Con una fecha seleccionada se enviarán solo los encargos de ese día. Sin fecha se enviarán todos los encargos pendientes.</p>
+      <p class="text-small text-muted">Preparado para las recogidas habituales de miércoles y viernes: enviará un único resumen conjunto con todos los encargos pendientes de la semana.</p>
     </div>
     <div class="viz-controls">
       <label class="form-label">Buscar cliente o encargo<input class="form-control" id="order-search" placeholder="Nombre, teléfono o número"></label>
@@ -1172,15 +1172,16 @@ svg {
       function providerSummary(){
         saveProvider();
         if(!phoneKey(provider.phone)){alert('Indique el teléfono del proveedor.');return;}
-        const date=root.querySelector('#orders-date').value;
+        const now=new Date(),weekday=(now.getDay()+6)%7,monday=new Date(now);monday.setDate(now.getDate()-weekday);const sunday=new Date(monday);sunday.setDate(monday.getDate()+6);
+        const weekStart=localIso(monday),weekEnd=localIso(sunday);
         orders.forEach(normalizeOrder);
-        const active=orders.filter(o=>o.status!=='Entregado'&&o.status!=='Cancelado'&&(!date||o.receivedDate===date));
+        const active=orders.filter(o=>o.status!=='Entregado'&&o.status!=='Cancelado'&&o.receivedDate>=weekStart&&o.receivedDate<=weekEnd);
         const grouped={};let pieces=0;
         active.forEach(o=>o.lines.filter(x=>x.status!=='Entregado').forEach(x=>{const key=x.animal+'|'+x.prep;grouped[key]=(grouped[key]||0)+Number(x.qty||0);pieces+=Number(x.qty||0);}));
         const detail=Object.entries(grouped).sort((a,b)=>a[0].localeCompare(b[0],'es')).map(([key,qty])=>{const parts=key.split('|');return'• '+qty+' '+parts[0]+' · '+parts[1];});
-        if(!detail.length){alert(date?'No hay piezas pendientes para la fecha seleccionada.':'No hay piezas pendientes para enviar.');return;}
+        if(!detail.length){alert('No hay piezas pendientes de esta semana para enviar.');return;}
         const greeting='Hola'+(provider.name?', '+provider.name:'')+'.';
-        const period=date?'FECHA: '+pretty(date):'TODOS LOS ENCARGOS PENDIENTES';
+        const period='RESUMEN SEMANAL · DEL '+pretty(weekStart)+' AL '+pretty(weekEnd);
         const message=greeting+'\n\nLe envío el resumen de piezas de La Pollería 2.0.\n\n'+period+'\n\nPIEZAS Y FORMA DE PREPARACIÓN:\n'+detail.join('\n')+'\n\nTOTAL DE PIEZAS: '+pieces+'\n\nMuchas gracias.\n\n'+shop;
         openWhatsApp(provider.phone,message);
       }
