@@ -876,7 +876,16 @@ svg {
     #caza-app .qty-row{display:grid;grid-template-columns:58px 1fr 58px;gap:8px;align-items:center}
     #caza-app .qty-row .btn,#caza-app .qty-row .form-control{min-height:54px}
     #caza-app .qty-row .form-control{text-align:center}
-    #caza-app .prep-block{display:grid;gap:14px;padding-bottom:22px;border-bottom:2px solid var(--border)}
+    #caza-app .prep-block{display:grid;gap:14px;padding:18px 0 26px;border-bottom:7px solid var(--caza-orange)}
+    #caza-app .prep-block:last-child{border-bottom:0}
+    #caza-app .prep-block-head{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px;border:2px solid #555b68;border-radius:14px;background:#20232a;color:#fff;text-align:left;cursor:pointer}
+    #caza-app .prep-block-head strong{font-size:24px}
+    #caza-app .prep-block-head .animal-total{color:#ffc07a;font-weight:900}
+    #caza-app .prep-block-head .toggle{font-size:25px;transition:transform .2s}
+    #caza-app .prep-block-summary{display:none;padding:13px 16px;border-radius:12px;background:#19472d;color:#a7ffc7;font-size:18px;font-weight:900}
+    #caza-app .prep-block.collapsed .prep-grid,#caza-app .prep-block.collapsed .allocation{display:none}
+    #caza-app .prep-block.collapsed .prep-block-summary{display:block}
+    #caza-app .prep-block.collapsed .prep-block-head .toggle{transform:rotate(-90deg)}
     #caza-app .prep-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
     #caza-app .prep-item{display:grid;gap:11px;text-align:left;padding:15px!important;border:2px solid #454954}
     #caza-app .prep-item.active{border-color:var(--caza-orange);background:#34271d;box-shadow:0 0 0 2px rgba(255,115,0,.16)}
@@ -1141,7 +1150,9 @@ svg {
         const box=root.querySelector('#prep-sections');box.innerHTML='';
         received.forEach(animal=>{
           const block=document.createElement('div');block.className='prep-block';block.dataset.animal=animal.name;block.dataset.received=animal.qty;
-          block.innerHTML='<h3>'+animal.name+' · '+animal.qty+' piezas</h3><div class="prep-grid"></div><p class="text-small text-muted allocation">Asignadas: 0 de '+animal.qty+'</p>';
+          block.innerHTML='<button type="button" class="prep-block-head" aria-expanded="true"><span><strong>'+animal.name+'</strong><br><span class="animal-total">'+animal.qty+' piezas entregadas</span></span><span class="toggle">▼</span></button><div class="prep-block-summary">✅ Preparación completa</div><div class="prep-grid"></div><p class="text-small text-muted allocation">Asignadas: 0 de '+animal.qty+'</p>';
+          const head=block.querySelector('.prep-block-head');
+          head.onclick=()=>{block.classList.toggle('collapsed');head.setAttribute('aria-expanded',block.classList.contains('collapsed')?'false':'true');};
           const grid=block.querySelector('.prep-grid');
           preps.forEach(p=>{
             const price=basePrices[animal.name+'|'+p.name]??'';
@@ -1185,6 +1196,17 @@ svg {
         allocation.textContent=remaining===0
           ?'✅ COMPLETO · '+total+' de '+received+' piezas asignadas'
           :'📦 Entregadas: '+received+' · Asignadas: '+total+' · QUEDAN: '+remaining;
+        const summary=block.querySelector('.prep-block-summary');
+        if(summary){
+          const chosen=[...block.querySelectorAll('.prep-item')].map((item,i)=>({name:preps[i].name,qty:Number(item.querySelector('.pieces').value)||0})).filter(x=>x.qty>0);
+          summary.textContent='✅ '+chosen.map(x=>x.qty+' '+x.name.toLowerCase()).join(' · ');
+        }
+        const wasComplete=block.dataset.wasComplete==='true';
+        block.dataset.wasComplete=remaining===0?'true':'false';
+        if(remaining===0&&!wasComplete){
+          window.setTimeout(()=>{block.classList.add('collapsed');const head=block.querySelector('.prep-block-head');if(head)head.setAttribute('aria-expanded','false');},350);
+        }
+        if(remaining>0)block.classList.remove('collapsed');
       }
 
       function collectLines(){
