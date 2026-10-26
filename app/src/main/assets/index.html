@@ -839,7 +839,10 @@ svg {
     #caza-app .form-control,#caza-app .form-select{min-height:54px}
     #caza-app .animal-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
     #caza-app .animal-choice{display:grid;gap:10px;text-align:center}
-    #caza-app .animal-choice .btn{width:100%;min-height:72px}
+    #caza-app .animal-choice .btn{width:100%;min-height:138px;padding:7px;display:flex;flex-direction:column;gap:7px;overflow:hidden}
+    #caza-app .animal-photo{width:100%;height:92px;object-fit:cover;border-radius:10px;display:block}
+    #caza-app .animal-fallback{font-size:54px;line-height:92px}
+    #caza-app .animal-name{font-weight:700;font-size:18px}
     #caza-app .qty-row{display:grid;grid-template-columns:58px 1fr 58px;gap:8px;align-items:center}
     #caza-app .qty-row .btn,#caza-app .qty-row .form-control{min-height:54px}
     #caza-app .qty-row .form-control{text-align:center}
@@ -908,6 +911,7 @@ svg {
   <section class="screen" id="screen-2" hidden>
     <h3>¿Qué animales ha traído?</h3>
     <div class="animal-grid" id="animal-grid"></div>
+    <p class="text-small text-muted">Fotografías de referencia: Wikimedia Commons.</p>
     <div id="other-animal-fields" hidden>
       <label class="form-label">Nombre del animal<input class="form-control" id="other-animal-name" placeholder="Escriba el animal"></label>
     </div>
@@ -981,10 +985,18 @@ svg {
   <script>
     (() => {
       const root=document.getElementById('caza-app');
+      const photo=file=>'https://commons.wikimedia.org/wiki/Special:Redirect/file/'+encodeURIComponent(file)+'?width=520';
       const animals=[
-        {name:'Perdiz',icon:'🪶'},{name:'Codorniz',icon:'🐤'},{name:'Faisán',icon:'🦚'},
-        {name:'Conejo',icon:'🐇'},{name:'Pato',icon:'🦆'},{name:'Becada',icon:'🐦'},
-        {name:'Paloma',icon:'🕊️'},{name:'Zorzal',icon:'🐦'},{name:'Otros',icon:'✏️'}
+        {name:'Perdiz',icon:'🪶',image:photo('Red-legged partridge (Alectoris rufa) 2017.jpg')},
+        {name:'Codorniz',icon:'🐤',image:photo('Coturnix coturnix.jpg')},
+        {name:'Faisán',icon:'🦚',image:photo('Common pheasant (Phasianus colchicus) male.jpg')},
+        {name:'Faisana',icon:'🐦',image:photo('Common pheasant (Phasianus colchicus) female.jpg')},
+        {name:'Conejo',icon:'🐇',image:photo('European Rabbit (Oryctolagus cuniculus).jpg')},
+        {name:'Pato',icon:'🦆',image:photo('Mallard duck (Anas platyrhynchos) male.jpg')},
+        {name:'Becada',icon:'🐦',image:photo('Eurasian Woodcock.jpg')},
+        {name:'Paloma',icon:'🕊️',image:photo('Common Wood Pigeon - Columba palumbus.jpg')},
+        {name:'Zorzal',icon:'🐦',image:photo('Song Thrush - Turdus philomelos.jpg')},
+        {name:'Otros',icon:'✏️',image:''}
       ];
       const preps=[
         {name:'Pelar / preparar',icon:'🔪'},{name:'Escabechar',icon:'🫙'},
@@ -993,6 +1005,7 @@ svg {
       const basePrices={
         'Perdiz|Pelar / preparar':3.8,'Perdiz|Escabechar':8,'Perdiz|Estofar':10,
         'Faisán|Pelar / preparar':7,'Faisán|Escabechar':9,
+        'Faisana|Pelar / preparar':7,'Faisana|Escabechar':9,
         'Pato|Pelar / preparar':8,'Conejo|Pelar / preparar':5,
         'Paloma|Pelar / preparar':3.8,'Zorzal|Pelar / preparar':2.5
       };
@@ -1062,7 +1075,8 @@ svg {
       const animalGrid=root.querySelector('#animal-grid');
       animals.forEach(a=>{
         const wrap=document.createElement('div');wrap.className='animal-choice';
-        wrap.innerHTML='<button type="button" class="btn viz-tile" aria-pressed="false"><h3>'+a.icon+'</h3>'+a.name+'</button><div class="qty-row"><button type="button" class="btn minus">−</button><input class="form-control qty" type="number" min="0" value="0" aria-label="Cantidad de '+a.name+'"><button type="button" class="btn plus">＋</button></div>';
+        const visual=a.image?'<img class="animal-photo" src="'+a.image+'" alt="" loading="lazy" onerror="this.hidden=true;this.nextElementSibling.hidden=false"><span class="animal-fallback" hidden>'+a.icon+'</span>':'<span class="animal-fallback">'+a.icon+'</span>';
+        wrap.innerHTML='<button type="button" class="btn viz-tile" aria-pressed="false">'+visual+'<span class="animal-name">'+a.name+'</span></button><div class="qty-row"><button type="button" class="btn minus">−</button><input class="form-control qty" type="number" min="0" value="0" aria-label="Cantidad de '+a.name+'"><button type="button" class="btn plus">＋</button></div>';
         const input=wrap.querySelector('.qty'),button=wrap.querySelector('.viz-tile');
         const update=()=>{const q=Math.max(0,Number(input.value)||0);input.value=q;button.setAttribute('aria-pressed',q>0?'true':'false');selected[a.name]=q;root.querySelector('#other-animal-fields').hidden=a.name!=='Otros'||q===0;};
         wrap.querySelector('.minus').onclick=()=>{input.value=Math.max(0,Number(input.value)-1);update();};
