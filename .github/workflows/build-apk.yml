@@ -20,12 +20,11 @@ jobs:
       - name: Recuperar firma permanente
         uses: actions/cache@v4
         with:
-          path: ~/.android/debug.keystore
-          key: encargos-caza-firma-android-v1
+          path: app/stable-debug.keystore
+          key: encargos-caza-firma-android-v2
       - name: Crear firma permanente si es la primera compilación
         run: |
-          mkdir -p ~/.android
-          if [ ! -f ~/.android/debug.keystore ]; then
+          if [ ! -f app/stable-debug.keystore ]; then
             keytool -genkeypair -v               -keystore ~/.android/debug.keystore               -storepass android               -alias androiddebugkey               -keypass android               -dname "CN=La Polleria 2.0, OU=Aplicaciones, O=La Polleria 2.0, L=Madrid, C=ES"               -keyalg RSA -keysize 2048 -validity 10000
           fi
       - name: Compilar APK
