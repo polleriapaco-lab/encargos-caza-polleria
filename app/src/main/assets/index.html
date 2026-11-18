@@ -941,6 +941,7 @@ svg {
       <button type="button" class="btn" id="nav-orders">📋 Encargos</button>
       <button type="button" class="btn" id="nav-clients">📒 Clientes</button>
       <button type="button" class="btn" id="nav-season">📊 Temporada</button>
+      <button type="button" class="btn" id="nav-backup">💾 Copia</button>
     </div>
   </div>
 
@@ -1038,6 +1039,18 @@ svg {
     </div>
     <div class="viz-grid" id="season-stats"></div>
     <div class="table-responsive"><table class="table"><thead><tr><th>Animal</th><th class="text-end">Piezas</th><th class="text-end">Importe</th></tr></thead><tbody id="season-body"></tbody></table></div>
+  </section>
+
+  <section class="screen" id="backup-screen" hidden>
+    <div class="card">
+      <h3>💾 Copia de seguridad</h3>
+      <p>Guarda tus encargos, clientes y datos del proveedor en un archivo. Haz una copia antes de instalar una actualización o cambiar de tablet.</p>
+      <div class="actions">
+        <button type="button" class="btn btn-primary" id="backup-export">Guardar copia</button>
+        <button type="button" class="btn" id="backup-import">Recuperar copia</button>
+      </div>
+      <p class="text-small" id="backup-status" role="status" aria-live="polite"></p>
+    </div>
   </section>
 
   <script>
@@ -1373,247 +1386,43 @@ svg {
       root.querySelector('#order-search').oninput=renderOrders;root.querySelector('#orders-date').onchange=renderOrders;
       root.querySelector('#nav-season').onclick=()=>{show('season-screen',null);renderSeason();};
       root.querySelector('#season-from').onchange=renderSeason;root.querySelector('#season-to').onchange=renderSeason;
+      root.querySelector('#nav-backup').onclick=()=>{show('backup-screen',null);root.querySelector('#backup-status').textContent=orders.length+' encargos y '+clients.length+' clientes guardados en esta tablet.';};
+      root.querySelector('#backup-export').onclick=()=>{
+        const data=JSON.stringify({format:'caza-polleria-backup',version:1,exportedAt:new Date().toISOString(),orders,clients,provider});
+        if(!window.CazaBackup){root.querySelector('#backup-status').textContent='Abre esta pantalla desde la aplicación Android para guardar el archivo.';return;}
+        window.CazaBackup.exportBackup(data);
+      };
+      root.querySelector('#backup-import').onclick=()=>{
+        if(!window.CazaBackup){root.querySelector('#backup-status').textContent='Abre esta pantalla desde la aplicación Android para recuperar el archivo.';return;}
+        window.CazaBackup.importBackup();
+      };
+      window.cazaBackupSaved=()=>{root.querySelector('#backup-status').textContent='Copia guardada. Conserva el archivo en un lugar seguro.';};
+      window.cazaBackupError=message=>{root.querySelector('#backup-status').textContent='No se pudo completar la copia: '+message;};
+      window.cazaReceiveBackup=text=>{
+        let data;
+        try{data=JSON.parse(text);}catch(e){window.cazaBackupError('el archivo no contiene datos válidos.');return;}
+        if(data?.format!=='caza-polleria-backup'||data.version!==1||!Array.isArray(data.orders)||!Array.isArray(data.clients)||!data.provider||typeof data.provider!=='object'||Array.isArray(data.provider)||!data.orders.every(o=>o&&typeof o==='object'&&Array.isArray(o.received)&&Array.isArray(o.lines))){window.cazaBackupError('el archivo no es una copia válida de Encargos de Caza.');return;}
+        if(!confirm('Esta copia contiene '+data.orders.length+' encargos y '+data.clients.length+' clientes. Sustituirá los datos actuales de esta tablet. ¿Quieres recuperarla?'))return;
+        const previous={format:'caza-polleria-backup',version:1,orders,clients,provider};
+        try{
+          localStorage.setItem('caza_backup_before_import',JSON.stringify(previous));
+          localStorage.setItem('caza_orders',JSON.stringify(data.orders));
+          localStorage.setItem('caza_clients',JSON.stringify(data.clients));
+          localStorage.setItem('caza_provider',JSON.stringify(data.provider));
+          orders=data.orders;clients=data.clients;provider=data.provider;
+          root.querySelector('#provider-name').value=provider.name||'';root.querySelector('#provider-phone').value=provider.phone||'';
+          root.querySelector('#backup-status').textContent='Copia recuperada: '+orders.length+' encargos y '+clients.length+' clientes.';
+        }catch(e){
+          localStorage.setItem('caza_orders',JSON.stringify(previous.orders));
+          localStorage.setItem('caza_clients',JSON.stringify(previous.clients));
+          localStorage.setItem('caza_provider',JSON.stringify(previous.provider));
+          window.cazaBackupError('no hay espacio suficiente para guardar todos los datos.');
+        }
+      };
     })();
   </script>
 </div>
 
-<script id="codex-visualization-floating-ui-core" src="https://unpkg.com/@floating-ui/core@1.7.3/dist/floating-ui.core.umd.min.js"></script>
-<script id="codex-visualization-floating-ui-dom" src="https://unpkg.com/@floating-ui/dom@1.7.4/dist/floating-ui.dom.umd.min.js"></script>
-<script id="codex-visualization-lucide" async src="https://unpkg.com/lucide@1.17.0/dist/umd/lucide.js"></script>
-<script id="codex-visualization-tooltip">/* oxlint-disable typescript/no-unsafe-argument, typescript/no-unsafe-call, typescript/no-unsafe-return */
-// Runs inside the visualization sandbox, not the host webview.
-(() => {
-  if (window.FloatingUIDOM == null) {
-    return;
-  }
-  const { autoUpdate, computePosition, flip, offset, shift, size } =
-    window.FloatingUIDOM;
-  const tooltipPlacements = new Set(["top", "right", "bottom", "left"]);
-  const tooltipId = `codex-visualization-tooltip-${
-    window.crypto?.randomUUID?.() ?? Date.now().toString(36)
-  }`;
-  const tooltipGap = 5;
-  const hoverDelay = 700;
-  const skipDelay = 300;
-  let activeTrigger = null;
-  let pendingTrigger = null;
-  let tooltip = null;
-  let openTimeout = null;
-  let autoUpdateCleanup = null;
-  let positionRequest = 0;
-  let skipDelayUntil = 0;
 
-  const getTrigger = (target) =>
-    target?.nodeType === Node.ELEMENT_NODE
-      ? target.closest("[data-tooltip]")
-      : null;
-  const containsTarget = (trigger, target) =>
-    target?.nodeType != null && trigger.contains(target);
-  const getContent = (trigger) =>
-    trigger.getAttribute("data-tooltip")?.trim() ?? "";
-  const getPlacement = (trigger) => {
-    const placement = trigger.getAttribute("data-tooltip-placement");
-    return tooltipPlacements.has(placement) ? placement : "top";
-  };
-  const getTooltip = () => {
-    if (tooltip == null) {
-      tooltip = document.createElement("div");
-      tooltip.id = tooltipId;
-      tooltip.className = "tooltip";
-      tooltip.setAttribute("role", "tooltip");
-    }
-    return tooltip;
-  };
-  const setDescribedBy = (trigger, described) => {
-    const ids = new Set(
-      (trigger.getAttribute("aria-describedby") ?? "")
-        .split(/\s+/)
-        .filter(Boolean),
-    );
-    if (described) {
-      ids.add(tooltipId);
-    } else {
-      ids.delete(tooltipId);
-    }
-    if (ids.size === 0) {
-      trigger.removeAttribute("aria-describedby");
-    } else {
-      trigger.setAttribute("aria-describedby", [...ids].join(" "));
-    }
-  };
-  const clearOpenTimeout = () => {
-    if (openTimeout != null) {
-      window.clearTimeout(openTimeout);
-      openTimeout = null;
-    }
-    pendingTrigger = null;
-  };
-  const closeTooltip = (activateSkipDelay = true) => {
-    clearOpenTimeout();
-    positionRequest += 1;
-    autoUpdateCleanup?.();
-    autoUpdateCleanup = null;
-    if (activeTrigger == null) {
-      return;
-    }
-    setDescribedBy(activeTrigger, false);
-    activeTrigger = null;
-    tooltip?.remove();
-    if (activateSkipDelay) {
-      skipDelayUntil = Date.now() + skipDelay;
-    }
-  };
-  const updatePosition = (trigger, floating) => {
-    const request = ++positionRequest;
-    void computePosition(trigger, floating, {
-      middleware: [
-        offset(tooltipGap),
-        flip({ padding: tooltipGap }),
-        shift({ padding: tooltipGap }),
-        size({
-          padding: tooltipGap,
-          apply({ availableHeight, availableWidth, elements }) {
-            elements.floating.style.setProperty(
-              "--tooltip-available-width",
-              `${Math.max(0, availableWidth)}px`,
-            );
-            elements.floating.style.setProperty(
-              "--tooltip-available-height",
-              `${Math.max(0, availableHeight)}px`,
-            );
-          },
-        }),
-      ],
-      placement: getPlacement(trigger),
-      strategy: "fixed",
-    })
-      .then(({ x, y }) => {
-        if (activeTrigger !== trigger || request !== positionRequest) {
-          return;
-        }
-        const scale = window.devicePixelRatio || 1;
-        floating.style.transform = `translate(${Math.round(x * scale) / scale}px, ${Math.round(y * scale) / scale}px)`;
-        floating.style.visibility = "visible";
-      })
-      .catch(() => {
-        if (activeTrigger === trigger && request === positionRequest) {
-          closeTooltip(false);
-        }
-      });
-  };
-  const openTooltip = (trigger) => {
-    const content = getContent(trigger);
-    if (!trigger.isConnected || content.length === 0) {
-      return;
-    }
-    clearOpenTimeout();
-    if (activeTrigger === trigger) {
-      return;
-    }
-    closeTooltip();
-    const floating = getTooltip();
-    floating.textContent = content;
-    floating.style.visibility = "hidden";
-    floating.style.transform = "translate(0, 0)";
-    document.body.appendChild(floating);
-    activeTrigger = trigger;
-    setDescribedBy(trigger, true);
-    autoUpdateCleanup = autoUpdate(trigger, floating, () => {
-      updatePosition(trigger, floating);
-    });
-  };
-  const requestOpen = (trigger, immediate = false) => {
-    if (
-      getContent(trigger).length === 0 ||
-      activeTrigger === trigger ||
-      pendingTrigger === trigger
-    ) {
-      return;
-    }
-    clearOpenTimeout();
-    pendingTrigger = trigger;
-    const delay =
-      immediate || activeTrigger != null || Date.now() < skipDelayUntil
-        ? 0
-        : hoverDelay;
-    if (delay === 0) {
-      openTooltip(trigger);
-      return;
-    }
-    openTimeout = window.setTimeout(() => {
-      openTimeout = null;
-      pendingTrigger = null;
-      openTooltip(trigger);
-    }, delay);
-  };
-  const handlePointerOpen = (event) => {
-    if (event.pointerType === "touch") {
-      return;
-    }
-    const trigger = getTrigger(event.target);
-    if (trigger == null || containsTarget(trigger, event.relatedTarget)) {
-      return;
-    }
-    requestOpen(trigger);
-  };
-  const handleLeave = (event) => {
-    const trigger = getTrigger(event.target);
-    if (trigger == null || containsTarget(trigger, event.relatedTarget)) {
-      return;
-    }
-    if (activeTrigger === trigger || pendingTrigger === trigger) {
-      closeTooltip();
-    }
-  };
-  const handleFocusIn = (event) => {
-    const trigger = getTrigger(event.target);
-    if (trigger?.matches(":focus-visible")) {
-      requestOpen(trigger, true);
-    }
-  };
-  const handleKeyDown = (event) => {
-    if (event.key === "Escape") {
-      closeTooltip();
-    }
-  };
-  const handleContextMenu = (event) => {
-    const trigger = getTrigger(event.target);
-    if (activeTrigger === trigger || pendingTrigger === trigger) {
-      closeTooltip();
-    }
-  };
-  const destroy = () => {
-    closeTooltip(false);
-    document.removeEventListener("pointerover", handlePointerOpen);
-    document.removeEventListener("pointerout", handleLeave);
-    document.removeEventListener("focusin", handleFocusIn);
-    document.removeEventListener("focusout", handleLeave);
-    document.removeEventListener("keydown", handleKeyDown);
-    document.removeEventListener("contextmenu", handleContextMenu);
-    tooltip = null;
-  };
-
-  document.addEventListener("pointerover", handlePointerOpen);
-  document.addEventListener("pointerout", handleLeave);
-  document.addEventListener("focusin", handleFocusIn);
-  document.addEventListener("focusout", handleLeave);
-  document.addEventListener("keydown", handleKeyDown);
-  document.addEventListener("contextmenu", handleContextMenu);
-  window.addEventListener("pagehide", destroy, { once: true });
-})();
-</script>
-<script id="codex-visualization-lucide-initialization">(() => {
-  const initialize = () => {
-    globalThis.lucide?.createIcons({ attrs: { width: 16, height: 16 } });
-  };
-  if (globalThis.lucide != null) {
-    initialize();
-    return;
-  }
-  document
-    .getElementById("codex-visualization-lucide")
-    ?.addEventListener("load", initialize, { once: true });
-})();
-</script>
 </body>
 </html>

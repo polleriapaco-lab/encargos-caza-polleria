@@ -3,6 +3,8 @@ on:
   push:
     branches: [ main ]
   workflow_dispatch:
+  schedule:
+    - cron: '17 3 */3 * *'
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -22,15 +24,24 @@ jobs:
         with:
           path: app/stable-debug.keystore
           key: encargos-caza-firma-android-v2
-      - name: Crear firma permanente si es la primera compilación
+      - name: Comprobar que la firma original está disponible
         run: |
           if [ ! -f app/stable-debug.keystore ]; then
-            keytool -genkeypair -v -keystore app/stable-debug.keystore -storepass android -alias androiddebugkey -keypass android -dname "CN=La Polleria 2.0, OU=Aplicaciones, O=La Polleria 2.0, L=Madrid, C=ES" -keyalg RSA -keysize 2048 -validity 10000
+            echo 'Falta la firma Android. No se generará otra: hay que restaurar la copia protegida.' >&2
+            exit 1
           fi
       - name: Compilar APK
         run: gradle :app:assembleDebug
+      - name: Proteger copia de la firma
+        run: openssl cms -encrypt -binary -aes256 -in app/stable-debug.keystore -out app/stable-debug.keystore.cms -outform DER app/signing-backup-public.pem
+      - name: Guardar firma cifrada
+        uses: actions/upload-artifact@v4
+        with:
+          name: Firma-cifrada-Caza-La-Polleria
+          path: app/stable-debug.keystore.cms
       - name: Guardar APK
         uses: actions/upload-artifact@v4
         with:
           name: Encargos-Caza-La-Polleria-APK
           path: app/build/outputs/apk/debug/app-debug.apk
+
