@@ -908,6 +908,13 @@ svg {
     #caza-app .summary-row{display:grid;grid-template-columns:140px 1fr;gap:10px;padding-bottom:8px;border-bottom:1px solid var(--border)}
     #caza-app .message{white-space:pre-line}
     #caza-app .order{display:grid;grid-template-columns:100px 1fr auto;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--border)}
+    #caza-app .week-group{margin:18px 0 24px;border-radius:17px;overflow:hidden;border:2px solid var(--week-border);background:var(--week-bg)}
+    #caza-app .week-group.week-a{--week-bg:#20302e;--week-head:#315b50;--week-border:#70d6bb}
+    #caza-app .week-group.week-b{--week-bg:#30283b;--week-head:#57436e;--week-border:#c8a4ee}
+    #caza-app .week-head{padding:13px 16px;background:var(--week-head);color:#fff;font-size:19px;font-weight:900;letter-spacing:.01em}
+    #caza-app .week-group .order{margin:0 10px;padding:16px 8px;border-bottom:1px solid rgba(255,255,255,.22)}
+    #caza-app .week-group .order:last-child{border-bottom:0}
+    #caza-app .week-group .order strong,#caza-app .week-group .order span{color:#fff}
     #caza-app .order-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
     #caza-app .provider-box{display:grid;gap:12px;margin-bottom:4px}
     #caza-app .provider-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
@@ -1299,12 +1306,33 @@ svg {
         return status==='Entregado'?'✅ Entregado':status==='Preparado'?'🟠 Preparado':'⏳ Pendiente';
       }
 
+      // Las fechas se interpretan a mediodía para evitar cambios de semana por huso horario.
+      function weekOf(dateString){
+        const value=/^\d{4}-\d{2}-\d{2}$/.test(dateString||'')?dateString:today;
+        const day=new Date(value+'T12:00:00');
+        day.setDate(day.getDate()-((day.getDay()+6)%7));
+        const start=localIso(day),end=new Date(day);
+        end.setDate(day.getDate()+6);
+        const parity=Math.floor(Date.UTC(day.getFullYear(),day.getMonth(),day.getDate())/604800000)%2;
+        return{start,end:localIso(end),tone:parity?'week-b':'week-a'};
+      }
+      function shortDay(dateString){return new Intl.DateTimeFormat('es-ES',{day:'numeric',month:'short'}).format(new Date(dateString+'T12:00:00'));}
+
       function renderOrders(){
         const q=root.querySelector('#order-search').value.toLowerCase(),date=root.querySelector('#orders-date').value,list=root.querySelector('#orders-list');list.innerHTML='';
         orders.forEach(normalizeOrder);
-        orders.filter(o=>o.status!=='Entregado'&&(!q||(o.number+' '+o.name+' '+o.phone).toLowerCase().includes(q))&&(!date||o.receivedDate===date)).sort((a,b)=>b.receivedDate.localeCompare(a.receivedDate)||b.number.localeCompare(a.number)).forEach(o=>{
+        let currentWeek='',group=null;
+        orders.filter(o=>o.status!=='Entregado'&&(!q||(o.number+' '+o.name+' '+o.phone).toLowerCase().includes(q))&&(!date||o.receivedDate===date)).sort((a,b)=>(a.pickupDate||a.receivedDate||'').localeCompare(b.pickupDate||b.receivedDate||'')||b.number.localeCompare(a.number)).forEach(o=>{
+          const week=weekOf(o.pickupDate||o.receivedDate);
+          if(week.start!==currentWeek){
+            currentWeek=week.start;
+            group=document.createElement('section');group.className='week-group '+week.tone;
+            const head=document.createElement('div');head.className='week-head';
+            head.textContent='📅 Semana del '+shortDay(week.start)+' al '+shortDay(week.end);
+            group.appendChild(head);list.appendChild(group);
+          }
           const row=document.createElement('div');row.className='order';
-          row.innerHTML='<strong>'+o.number+'</strong><div><strong>'+o.name+'</strong> · '+o.phone+'<br><span class="text-small text-muted">'+o.received.map(x=>x.qty+' '+x.name).join(' · ')+'</span><br><strong>'+money(o.total)+' · '+o.status+'</strong><div class="order-lines"></div></div><div class="order-actions"><button type="button" class="btn btn-primary notify">📲 Avisar por WhatsApp</button></div>';
+          row.innerHTML='<strong>'+o.number+'</strong><div><strong>'+o.name+'</strong> · '+o.phone+'<br><span class="text-small">📆 Recogida: '+(o.pickupDate?pretty(o.pickupDate):'sin fecha')+'</span><br><span class="text-small">'+o.received.map(x=>x.qty+' '+x.name).join(' · ')+'</span><br><strong>'+money(o.total)+' · '+o.status+'</strong><div class="order-lines"></div></div><div class="order-actions"><button type="button" class="btn btn-primary notify">📲 Avisar por WhatsApp</button></div>';
           const lineBox=row.querySelector('.order-lines');
           o.lines.forEach(x=>{
             const line=document.createElement('div');line.className='order-line';
@@ -1322,7 +1350,7 @@ svg {
             if(!readyLines.length){alert('Marque primero qué preparaciones están listas.');return;}
             const stamp=new Date().toISOString();readyLines.forEach(x=>x.preparedNotifiedAt=stamp);o.preparedNotifiedAt=stamp;save();openWhatsApp(o.phone,preparedMessage(o));
           };
-          list.appendChild(row);
+          group.appendChild(row);
         });
         save();
         if(!list.children.length)list.innerHTML='<p class="text-muted">No hay encargos pendientes con estos criterios.</p>';
