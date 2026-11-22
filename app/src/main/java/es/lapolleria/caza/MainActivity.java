@@ -86,6 +86,7 @@ public class MainActivity extends Activity {
     settings.setAllowContentAccess(false);
     settings.setSupportZoom(false);
     webView.addJavascriptInterface(new BackupBridge(), "CazaBackup");
+    webView.setWebChromeClient(new android.webkit.WebChromeClient());
     webView.setWebViewClient(new WebViewClient() {
       @Override
       public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
