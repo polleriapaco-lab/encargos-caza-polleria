@@ -1,0 +1,49 @@
+<!doctype html><html lang="es"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Recetas · La Pollería 2.0</title>
+<style>*{box-sizing:border-box}body{background:#161411;color:#fff8ee;font:17px system-ui;margin:0}main{max-width:740px;margin:auto;padding:24px}small{color:#ffad59;font-weight:bold}h1{margin:8px 0}label{display:block;margin:20px 0 6px}input,select,textarea,button{width:100%;padding:12px;border:1px solid #72665b;border-radius:9px;font:inherit}input,select,textarea{background:#29231e;color:#fff}button{background:#ff9e43;color:#211405;font-weight:bold;margin-top:12px;cursor:pointer}textarea{min-height:230px}p{color:#ddcabb}button:disabled{opacity:.55} .secondary{background:#30271e;color:#ffd29d} select{color-scheme:dark}</style>
+<main><small>LA POLLERÍA 2.0</small><h1>Recetas para tus clientes</h1><p>Escribe el producto, revisa el mensaje y compártelo por WhatsApp.</p>
+<label for="favorites">Mis fichas guardadas</label><select id="favorites"><option value="">Elige una ficha guardada</option></select><form id="generate"><label for="product">Producto</label><input id="product" required maxlength="120" placeholder="Ej. Chuletas de conejo"><label for="method">Cómo cocinarlo</label><select id="method"><option>Elige el método más adecuado</option><option>Plancha</option><option>Horno</option><option>Freidora de aire</option><option>Cazuela</option></select><label for="servings">Raciones para la receta nueva</label><select id="servings"><option>2</option><option>4</option><option>6</option></select><button id="generate-button">Preparar receta</button></form>
+<p id="status" role="status"></p><label for="recipe">Mensaje para el cliente (editable)</label><textarea id="recipe" placeholder="Aquí aparecerá la receta. También puedes escribirla tú."></textarea><button type="button" class="secondary" id="save">Guardar como ficha de la tienda</button><button type="button" class="secondary" id="remove" hidden>Quitar ficha guardada</button>
+<p>Firma que se añade al mensaje:<br><strong id="signature" style="white-space:pre-line"></strong></p><form id="send"><label for="phone">Teléfono del cliente</label><input id="phone" type="tel" required placeholder="Ej. 612 345 678 o +33…"><button>Abrir WhatsApp con la receta</button></form><button type="button" class="secondary" id="copy">Copiar mensaje</button><p>El enlace abre el chat con el texto preparado. Tú decides cuándo enviarlo.</p><button type="button" id="setup" class="secondary">Configurar clave de Gemini</button></main>
+<script>
+let pending;
+function generateAndroid(input){return new Promise((resolve,reject)=>{
+ pending=resolve;
+ try{AndroidRecetas.generate(JSON.stringify(input));}catch(e){pending=null;reject(e);}
+});}
+window.recipeResult=data=>{if(pending){const cb=pending;pending=null;cb(data);}};
+document.getElementById('setup').onclick=()=>AndroidRecetas.setup();
+
+const $=id=>document.getElementById(id);
+const signature='Enviado por LA POLLERÍA 2.0\nMercado de Chamartín · Puestos 61-62 · Planta alta\n28016 Madrid\nTeléfono: 91 457 15 89';
+$('signature').textContent=signature;
+const messageWithSignature=recipe=>recipe.endsWith(signature)?recipe:recipe+'\n\n'+signature;
+const storageKey='polleria-recetas-v1';
+let fichas=[];
+try{const data=JSON.parse(localStorage.getItem(storageKey)||'[]');if(Array.isArray(data))fichas=data.filter(f=>f&&typeof f.product==='string'&&typeof f.recipe==='string'&&typeof f.method==='string');}catch{}
+const key=(p,m)=>JSON.stringify([p.trim().toLocaleLowerCase('es'),m]);
+let selected='';
+function refresh(){
+ const picker=$('favorites');picker.replaceChildren(new Option('Elige una ficha guardada',''));
+ for(const f of fichas){const k=key(f.product,f.method);picker.add(new Option(f.product+' · '+f.method,k));}
+ picker.value=selected;$('remove').hidden=!picker.value;
+}
+function persist(next){try{localStorage.setItem(storageKey,JSON.stringify(next));fichas=next;return true;}catch{$('status').textContent='No se pudo guardar en este navegador.';return false;}}
+$('favorites').onchange=()=>{
+ selected=$('favorites').value;
+ const f=fichas.find(f=>key(f.product,f.method)===selected);
+ if(f){$('product').value=f.product;$('method').value=f.method;$('recipe').value=f.recipe;$('status').textContent='Ficha de la tienda cargada.';}
+ refresh();
+};
+$('save').onclick=()=>{
+ const product=$('product').value.trim(),method=$('method').value,recipe=$('recipe').value.trim();
+ if(!product||!recipe){$('status').textContent='Completa el producto y el mensaje para guardar la ficha.';return;}
+ const k=key(product,method);
+ if(fichas.some(f=>key(f.product,f.method)===k)&&!confirm('¿Sustituir la ficha guardada de este producto y método?'))return;
+ if(persist([...fichas.filter(f=>key(f.product,f.method)!==k),{product,method,recipe}])){selected=k;refresh();$('status').textContent='Ficha guardada en este navegador.';}
+};
+$('remove').onclick=()=>{if(selected&&confirm('¿Quitar esta ficha de tus guardadas?')&&persist(fichas.filter(f=>key(f.product,f.method)!==selected))){selected='';refresh();$('status').textContent='Ficha quitada.';}};
+refresh();
+$('generate').onsubmit=async e=>{e.preventDefault();const product=$('product').value.trim(),method=$('method').value,servings=Number($('servings').value);if(!product){$('status').textContent='Escribe el nombre del producto.';return;}const k=key(product,method),f=fichas.find(f=>key(f.product,f.method)===k);if(f){selected=k;refresh();$('recipe').value=f.recipe;$('status').textContent='Se ha usado tu ficha de la tienda con sus cantidades originales.';return;}const b=e.submitter;b.disabled=true;$('status').textContent='Preparando la receta…';try{const d=await generateAndroid({product,method,servings});if(d.error)throw Error(d.error);$('recipe').value=d.recipe;$('status').textContent='Revisa la receta antes de compartirla.'}catch(err){$('status').textContent=err.message}finally{b.disabled=false}};
+$('copy').onclick=async()=>{const recipe=$('recipe').value.trim();if(!recipe){$('status').textContent='Escribe o genera la receta primero.';return;}try{AndroidRecetas.copy(messageWithSignature(recipe));$('status').textContent='Mensaje copiado.';}catch{$('status').textContent='No se pudo copiar. Puedes abrir WhatsApp con la receta y la firma.';}};
+$('send').onsubmit=e=>{e.preventDefault();const raw=$('phone').value.trim().replace(/[\s().-]/g,'');const number=/^[67]\d{8}$/.test(raw)?'34'+raw:raw.replace(/^\+|^00/,'');if(!/^\+?\d+$/.test(raw)||!/^([1-9]\d{7,14})$/.test(number)||(/^\d{9}$/.test(raw)&&number===raw)){ $('status').textContent='Pon un móvil español de 9 cifras o un número con prefijo internacional.';return}const msg=$('recipe').value.trim();if(!msg){$('status').textContent='Escribe o genera la receta primero.';return}AndroidRecetas.whatsapp(number,messageWithSignature(msg))};
+</script></html>

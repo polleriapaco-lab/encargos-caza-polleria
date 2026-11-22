@@ -1,0 +1,18 @@
+Recetas La Pollería 2.0 · Proyecto Android
+Este ZIP contiene el proyecto, no un APK.
+
+Compilación inicial: abrir esta carpeta en Android Studio, sincronizar
+Gradle y usar Generar APK (debug para una prueba; APK firmado para uso
+estable). Requisitos: SDK Android 35, AGP 8.7.3, Gradle 8.9, JDK 17.
+Conserva la misma firma si quieres instalar futuras actualizaciones encima.
+Identificador: es.lapolleria.recetas.
+
+Una vez instalado, abre Recetas y pulsa Configurar clave de Gemini.
+Pega tu clave de Google AI Studio en la propia tablet. Se guarda cifrada
+en la tablet. La generación necesita internet; las fichas quedan en la
+tablet y pueden consultarse sin conexión. Compartir requiere WhatsApp o
+WhatsApp Business e internet. La app no depende del PC ni de Node.js.
+
+Antes de usar con clientes, prueba el inicio, una generación, el guardado
+tras cerrar la app y un envío de prueba a tu propio número. Las fichas
+guardadas en Chrome con la versión anterior no se copian automáticamente.
