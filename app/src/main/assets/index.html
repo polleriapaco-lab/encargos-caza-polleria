@@ -1156,6 +1156,28 @@ svg {
         input.oninput=update;animalGrid.appendChild(wrap);
       });
 
+      let editingOrder=null;
+      const canCorrect=o=>o.status==='Recibido'&&o.lines.every(x=>x.status==='Pendiente');
+      function editOrder(o){
+        reset();
+        editingOrder=o;
+        root.querySelector('#client-name').value=o.name;
+        root.querySelector('#client-phone').value=o.phone;
+        root.querySelector('#client-status').textContent='Editando el encargo '+o.number+'. Pulsa Guardar cambios al terminar.';
+        root.querySelector('#received-date').value=o.receivedDate;
+        const pickup=root.querySelector('#pickup-date');
+        pickup.min=o.receivedDate||today;pickup.value=o.pickupDate;
+        root.querySelector('#payment-status').value=o.paymentStatus;
+        root.querySelector('#paid-amount').value=o.paid||0;
+        for(const a of o.received){
+          const name=animals.some(x=>x.name===a.name)?a.name:'Otros';
+          const tile=[...animalGrid.querySelectorAll('.animal-choice')].find(x=>x.querySelector('.animal-name').textContent===name);
+          tile.querySelector('.qty').value=a.qty;
+          tile.querySelector('.qty').oninput();
+          if(name==='Otros')root.querySelector('#other-animal-name').value=a.name;
+        }
+        root.querySelector('#other-animal-fields').hidden=!selected.Otros;
+      }
       function receivedAnimals(){
         const out=Object.entries(selected).filter(([,q])=>q>0&&q!==undefined).map(([name,qty])=>({name:name==='Otros'?(root.querySelector('#other-animal-name').value.trim()||'Otro animal'):name,qty}));
         return out;
@@ -1163,7 +1185,22 @@ svg {
 
       root.querySelector('#to-preps').onclick=()=>{
         const received=receivedAnimals();if(!received.length){alert('Indique al menos un animal.');return;}
-        lines=[];renderPrepSections(received);go(3);
+        const existing=editingOrder?(lines.length?lines:editingOrder.lines):[];
+        renderPrepSections(received);
+        root.querySelectorAll('.prep-block').forEach(block=>{
+          for(const x of existing.filter(x=>x.animal===block.dataset.animal)){
+            const found=preps.findIndex(p=>p.name===x.prep);
+            const i=found>=0?found:preps.findIndex(p=>p.name==='Otros');
+            const item=block.querySelectorAll('.prep-item')[i];
+            if(!item)continue;
+            item.querySelector('.pieces').value=x.qty;
+            item.querySelector('.price').value=x.price;
+            item.querySelector('.price-label').textContent=money(x.price)+'/pieza';
+            if(found<0)item.querySelector('.other-prep').value=x.prep;
+          }
+          updateAllocation(block);
+        });
+        go(3);
       };
 
       function renderPrepSections(received){
@@ -1259,9 +1296,9 @@ svg {
       root.querySelector('#to-summary').onclick=()=>{
         const pickup=root.querySelector('#pickup-date').value;if(!pickup){alert('Indique la fecha prevista de recogida.');return;}
         const name=root.querySelector('#client-name').value.trim()||'Cliente',phone=root.querySelector('#client-phone').value.trim()||'Sin teléfono',received=receivedAnimals();
-        currentNumber=nextNumber();currentMessage=confirmation(name,received,pickup);
+        currentNumber=editingOrder?.number||nextNumber();currentMessage=confirmation(name,received,pickup);
         root.querySelector('#summary').innerHTML='<div class="summary-row"><span class="text-muted">Encargo</span><strong>'+currentNumber+'</strong></div><div class="summary-row"><span class="text-muted">Cliente</span><span>'+name+' · '+phone+'</span></div><div class="summary-row"><span class="text-muted">Entregado</span><span>'+received.map(x=>x.qty+' '+x.name).join('<br>')+'</span></div><div class="summary-row"><span class="text-muted">Preparación</span><span>'+lines.map(x=>x.qty+' '+x.animal+' · '+x.prep+' · '+money(x.subtotal)).join('<br>')+'</span></div><div class="summary-row"><span class="text-muted">Total</span><strong>'+money(total())+'</strong></div><div class="summary-row"><span class="text-muted">Recogida</span><strong>'+pretty(pickup)+'</strong></div>';
-        root.querySelector('#whatsapp-preview').textContent=currentMessage;go(5);
+        root.querySelector('#whatsapp-preview').textContent=editingOrder?'Los cambios se guardarán sin abrir WhatsApp.':currentMessage;root.querySelector('#confirm-order').textContent=editingOrder?'Guardar cambios':'Guardar y abrir WhatsApp';go(5);
       };
 
       const openWhatsApp=(phone,message)=>{let n=phone.replace(/\D/g,'');if(n.length===9)n='34'+n;if(!n){alert(message);return;}window.location.href='https://wa.me/'+n+'?text='+encodeURIComponent(message);};
@@ -1285,6 +1322,12 @@ svg {
       root.querySelector('#confirm-order').onclick=()=>{
         const paymentStatus=root.querySelector('#payment-status').value;
         const order={number:currentNumber,name:root.querySelector('#client-name').value.trim()||'Cliente',phone:root.querySelector('#client-phone').value.trim(),received:receivedAnimals(),lines:lines.map(x=>({...x,status:'Pendiente',preparedNotifiedAt:null,deliveredAt:null})),receivedDate:root.querySelector('#received-date').value,pickupDate:root.querySelector('#pickup-date').value,paymentStatus,paid:paymentStatus==='Pagado'?total():(Number(root.querySelector('#paid-amount').value)||0),status:'Recibido',total:total(),preparedNotifiedAt:null};
+        if(editingOrder){
+          const index=orders.indexOf(editingOrder);
+          if(index<0||!canCorrect(editingOrder)){alert('Este encargo ya no se puede modificar.');return;}
+          orders[index]={...editingOrder,...order};editingOrder=null;save();
+          show('orders-screen',null);renderOrders();return;
+        }
         const savedClient=upsertClient(order.name,order.phone);if(savedClient)selectedClientId=savedClient.id;
         orders.push(order);save();openWhatsApp(order.phone,currentMessage);show('saved-screen',null);root.querySelector('#saved-text').textContent='El encargo '+order.number+' ha quedado guardado con un total de '+money(order.total)+(savedClient?' y el cliente se ha guardado en la agenda.':'.');
       };
@@ -1335,7 +1378,7 @@ svg {
         const q=root.querySelector('#order-search').value.toLowerCase(),date=root.querySelector('#orders-date').value,list=root.querySelector('#orders-list');list.innerHTML='';
         orders.forEach(normalizeOrder);
         let currentWeek='',group=null;
-        orders.filter(o=>o.status!=='Entregado'&&(!q||(o.number+' '+o.name+' '+o.phone).toLowerCase().includes(q))&&(!date||o.receivedDate===date)).sort((a,b)=>(a.pickupDate||a.receivedDate||'').localeCompare(b.pickupDate||b.receivedDate||'')||b.number.localeCompare(a.number)).forEach(o=>{
+        orders.filter(o=>o.status!=='Entregado'&&o.status!=='Cancelado'&&(!q||(o.number+' '+o.name+' '+o.phone).toLowerCase().includes(q))&&(!date||o.receivedDate===date)).sort((a,b)=>(a.pickupDate||a.receivedDate||'').localeCompare(b.pickupDate||b.receivedDate||'')||b.number.localeCompare(a.number)).forEach(o=>{
           const week=weekOf(o.pickupDate||o.receivedDate);
           if(week.start!==currentWeek){
             currentWeek=week.start;
@@ -1357,6 +1400,17 @@ svg {
             lineBox.appendChild(line);
           });
           const notify=row.querySelector('.notify');
+          if(canCorrect(o)){
+            const edit=document.createElement('button'),cancel=document.createElement('button');
+            edit.type=cancel.type='button';edit.className=cancel.className='btn';
+            edit.textContent='Editar';cancel.textContent='Anular';
+            edit.onclick=()=>editOrder(o);
+            cancel.onclick=()=>{
+              if(!canCorrect(o)||!confirm('¿Anular el encargo '+o.number+'? Dejará de aparecer en pendientes y no contará en los totales. No se enviará ningún aviso.'))return;
+              o.status='Cancelado';o.cancelledAt=new Date().toISOString();save();renderOrders();
+            };
+            notify.after(edit,cancel);
+          }
           const readyLines=o.lines.filter(x=>x.status==='Preparado');
           notify.disabled=!readyLines.length;
           notify.onclick=()=>{
@@ -1378,7 +1432,7 @@ svg {
       }
 
       function reset(){
-        selected={};lines=[];currentNumber='';currentMessage='';selectedClientId=null;root.querySelector('#client-name').value='';root.querySelector('#client-phone').value='';root.querySelector('#client-search').value='';root.querySelector('#client-suggestions').innerHTML='';root.querySelector('#client-status').textContent='Si es un cliente nuevo, escriba sus datos debajo. Se guardará automáticamente al confirmar el encargo.';root.querySelectorAll('#animal-grid .qty').forEach(x=>x.value=0);root.querySelectorAll('#animal-grid .viz-tile').forEach(x=>x.setAttribute('aria-pressed','false'));root.querySelector('#other-animal-fields').hidden=true;root.querySelector('#received-date').value=today;root.querySelector('#pickup-date').value='';root.querySelector('#payment-status').value='Pendiente';root.querySelector('#paid-amount').value=0;go(1);
+        editingOrder=null;root.querySelector('#pickup-date').min=today;selected={};lines=[];currentNumber='';currentMessage='';selectedClientId=null;root.querySelector('#client-name').value='';root.querySelector('#client-phone').value='';root.querySelector('#client-search').value='';root.querySelector('#client-suggestions').innerHTML='';root.querySelector('#client-status').textContent='Si es un cliente nuevo, escriba sus datos debajo. Se guardará automáticamente al confirmar el encargo.';root.querySelectorAll('#animal-grid .qty').forEach(x=>x.value=0);root.querySelectorAll('#animal-grid .viz-tile').forEach(x=>x.setAttribute('aria-pressed','false'));root.querySelector('#other-animal-fields').hidden=true;root.querySelector('#received-date').value=today;root.querySelector('#pickup-date').value='';root.querySelector('#payment-status').value='Pendiente';root.querySelector('#paid-amount').value=0;go(1);
       }
       root.querySelector('#nav-new').onclick=reset;root.querySelector('#another-order').onclick=reset;
       root.querySelector('#nav-orders').onclick=()=>{show('orders-screen',null);renderOrders();};
